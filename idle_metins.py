@@ -32,9 +32,14 @@ def main(debug):
 
 def run(debug):
     yolo = YOLO(MODELS_DIR / "valium_idle_metiny_yolov8s.pt")
+    logger.info("YOLO model loaded.")
 
     vision = VisionDetector()
+    logger.info("Vision detector loaded.")
+
     game = GameController(vision_detector=vision, start_delay=5)
+    logger.info("Game controller loaded.")
+
     channel_gen = gen_next_channel()
 
     YOLO_CONFIDENCE_THRESHOLD = 0.8

@@ -175,6 +175,8 @@ def run(debug):
 
         stage1_task_msg = "Pokonajcie 200 potworów."
         if stage == 1:
+            sleep(14)  # wait for dungeon message and mobs to appear
+
             stage1_all_mobs_killed = False
             while not stage1_all_mobs_killed:
                 game.unmount()
@@ -303,14 +305,15 @@ def run(debug):
 
             if stage3_first_frame:
                 game.calibrate_camera()
-                game.move_camera_down(press_time=1.5)
+                game.zoomin_camera(press_time=0.4)
+                game.move_camera_down(press_time=1.2)
                 stage3_first_frame = False
 
             if not any_yolo_results:
                 if destroyed_metins == 0:
-                    game.move_camera_right(press_time=0.2)
+                    game.move_camera_right(press_time=0.25)
                 else:
-                    game.move_camera_left(press_time=0.2)
+                    game.move_camera_left(press_time=0.25)
                 logger.warning(f"Stage {stage}  |  Metin not found. Looking around, retrying...")
                 _before_next_frame(game, vision, frame, cap_t0)
                 continue
@@ -335,20 +338,17 @@ def run(debug):
                 game.use_polymorph()
 
                 game.click_at(closest_metin_center_global)
-                if destroyed_metins == 0:
-                    game.tap_key(GameBind.MOVE_RIGHT, press_time=0.8)
-                    
-                walk_to_metin_time = 6
-                sleep(walk_to_metin_time)
 
-                # metin_destroy_time = 24  # poly + masne eq
-                # metin_destroy_time = 47  # mounted + masne eq
-                # metin_destroy_time = 25  # mounted + masne eq + IS
+                walk_to_metin_time = 6
+                if destroyed_metins == 0:
+                    sleep(walk_to_metin_time / 2)
+                    game.tap_key(GameBind.MOVE_RIGHT, press_time=0.8)
+                    sleep(walk_to_metin_time / 2 - 1)
+                else:
+                    sleep(walk_to_metin_time)
+
                 metin_destroy_time = 15  # poly + masne eq + IS
                 sleep(metin_destroy_time)
-
-                if destroyed_metins == 0:
-                    game.move_camera_left(press_time=2.6)
 
                 destroyed_metins += 1
                 metin_detected = False
@@ -358,7 +358,7 @@ def run(debug):
 
             dung_message = VisionDetector.get_dungeon_message(frame)
             logger.debug(f"Stage {stage}  | {dung_message=}")
-            msg_similarity = nlp(dung_message).similarity(nlp(stage5_task_msg))
+            msg_similarity = nlp(dung_message).similarity(nlp(stage3_task_msg))
             task_msg_changed = msg_similarity < 0.6
             if destroyed_metins >= 5 and task_msg_changed:
                 game.polymorph_off()
@@ -405,7 +405,7 @@ def run(debug):
                         game.move_full_butelka_dywizji()
                         game.use_next_butelka_dywizji()
                     logger.warning("Valium message detected. Skipping this frame, recapturing in 5s...")
-                    sleep(8)
+                    sleep(5)
                     continue
 
                 item_dropped, item_dropped_conf, item_dropped_loc = vision.detect_runo_lesne_dropped(frame)

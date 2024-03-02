@@ -28,6 +28,7 @@ from settings import (
     BotBind,
     ResourceName,
 )
+import positions
 
 
 class WindowNotFoundError(ValueError):
@@ -131,6 +132,8 @@ class VisionDetector:
         return locs_centers
 
     def detect_empty_items_slots(self, frame: np.ndarray) -> None:
+        # tested ONLY for butelki dywizji, może nie działać dla innych itemów
+
         frame_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         # Threshold the image to get the slots as white on a black background.
         _, binary_image = cv2.threshold(frame_gray, 15, 255, cv2.THRESH_BINARY_INV)
@@ -150,7 +153,8 @@ class VisionDetector:
             # Inventory slots are more or less square, with the width and height being similar
             if 0.8 < w/h < 1.2:
                 # Check if the slot is in the lower right part (which is the inventory area)
-                if (630 < x) and (210 < y < 550):
+                # if (630 < x) and (210 < y < 550):  # 800x600
+                if (630 < x) and (140 < y < 480):  # 800x530
                     slot_contours.append(contour)
         # Calculate centroids for the filtered contours
         centroids = []
@@ -342,7 +346,7 @@ class VisionDetector:
 
     @staticmethod
     def get_dungeon_message(frame: np.ndarray) -> str:
-        msg_bbox = (130, 108, 540, 16)
+        # msg_bbox = (130, 108, 540, 16)
         msg_text_color = (242, 231, 193)
 
         min_grayscale_threshold = 200
@@ -352,7 +356,7 @@ class VisionDetector:
         ocr_config = f'-l pol --psm {psm} --oem {oem}'
         kernel = np.ones((3,3), np.uint8)
 
-        cropped_msg_img = VisionDetector.crop_bbox(frame, *msg_bbox)
+        cropped_msg_img = VisionDetector.crop_bbox(frame, *positions.DUNGEON_MSG_BBOX)
         cropped_msg_img_grayscale = cv2.cvtColor(cropped_msg_img, cv2.COLOR_BGR2GRAY)
         upscaled_img = VisionDetector.scale_frame(cropped_msg_img_grayscale, scale=upscale)
         _, upscaled_binarized_img = cv2.threshold(upscaled_img, min_grayscale_threshold, 255, cv2.THRESH_BINARY)
@@ -364,9 +368,9 @@ class VisionDetector:
         return text.strip()
 
     def get_target_text(self, frame: np.ndarray) -> str:
-        target_name_bbox = (255, 20, 150, 20)
-        roi = VisionDetector.crop_bbox(frame, *target_name_bbox)
-        
+        # target_name_bbox = (255, 20, 150, 20)
+        roi = VisionDetector.crop_bbox(frame, *positions.TARGET_NAME_BBOX)
+
         cv2.imwrite("target_menu_roi.png", roi)
 
         min_grayscale_threshold = 80
@@ -389,9 +393,19 @@ class VisionDetector:
     def fill_non_clickable_wth_black(frame: np.ndarray) -> np.array:
         fill_color = (0, 0, 0)
         thickness = -1
-        frame = cv2.rectangle(frame, (0, 0), (260, 90), fill_color, thickness)  # mask effects roi
-        frame = cv2.rectangle(frame, (0, 170), (120, 350), fill_color, thickness)  # mask quests roi
-        frame = cv2.rectangle(frame, (0, 600), (800, 530), fill_color, thickness)  # mask low bar
-        frame = cv2.rectangle(frame, (640, 600), (800, 0), fill_color, thickness)  # mask minimap; right bar
-        frame = cv2.rectangle(frame, (100, 530), (700, 500), fill_color, thickness)  # mask rest of the chat
+
+        # # 800 x 600
+        # frame = cv2.rectangle(frame, (0, 0), (260, 90), fill_color, thickness)  # mask effects roi
+        # frame = cv2.rectangle(frame, (0, 170), (120, 350), fill_color, thickness)  # mask quests roi
+        # frame = cv2.rectangle(frame, (0, 600), (800, 530), fill_color, thickness)  # mask low bar
+        # frame = cv2.rectangle(frame, (640, 600), (800, 0), fill_color, thickness)  # mask minimap; right bar
+        # frame = cv2.rectangle(frame, (100, 530), (700, 500), fill_color, thickness)  # mask rest of the chat
+
+        # 800 x 530 (y * 0.83 to local)
+        frame = cv2.rectangle(frame, (0, 0), (260, 80), fill_color, thickness)  # mask effects roi
+        frame = cv2.rectangle(frame, (0, 150), (120, 309), fill_color, thickness)  # mask quests roi
+        frame = cv2.rectangle(frame, (0, 530), (800, 460), fill_color, thickness)  # mask low bar
+        frame = cv2.rectangle(frame, (640, 530), (800, 0), fill_color, thickness)  # mask minimap; right bar
+        frame = cv2.rectangle(frame, (100, 468), (700, 420), fill_color, thickness)  # mask rest of the chat
+
         return frame

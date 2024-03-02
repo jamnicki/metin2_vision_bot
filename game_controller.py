@@ -29,6 +29,7 @@ from settings import (
     UserBind,
 )
 from vision_detector import VisionDetector
+import positions
 
 
 def scale_img(img, scale=5):
@@ -64,7 +65,8 @@ class GameController:
         self._start_delay(self.start_delay)
         
         self.saved_credentials_idx = saved_credentials_idx
-        self.game_exe_path = r"D:\Gry\ValiumAkademia\valium.exe"
+        # self.game_exe_path = r"D:\Gry\ValiumAkademia\valium.exe"  # local
+        self.game_exe_path = r"C:\ValiumAkademia\valium.exe"  # vbox
 
         self.keyboard = KeyboardController()
         self.keyboard_listener = self._init_keyboard_listener()
@@ -389,6 +391,12 @@ class GameController:
     def move_camera_down(self, press_time: float):
         self.tap_key(GameBind.CAMERA_DOWN, press_time=press_time)
 
+    def zoomin_camera(self, press_time: float):
+        self.tap_key(GameBind.CAMERA_ZOOM_IN, press_time=press_time)
+
+    def zoomout_camera(self, press_time: float):
+        self.tap_key(GameBind.CAMERA_ZOOM_OUT, press_time=press_time)
+
     def show_eq(self):
         if not self.eq_visible:
             self.tap_key(GameBind.EQ_MENU)
@@ -405,12 +413,7 @@ class GameController:
         if slot not in range(1, 5):
             logger.warning(f"Invalid slot number: {slot}")
             return
-        slot1_center = (650, 215)
-        slot2_center = (690, 215)
-        slot3_center = (730, 215)
-        slot4_center = (770, 215)
-        slots_centers = [slot1_center, slot2_center, slot3_center, slot4_center]
-        slot_global_center = self.vision_detector.get_global_pos(slots_centers[slot - 1])
+        slot_global_center = self.vision_detector.get_global_pos(positions.EQ_SLOT_SELECT_BTNS[slot - 1])
         self.click_at(slot_global_center)
 
     def move_full_butelka_dywizji(self):
@@ -441,8 +444,8 @@ class GameController:
         top_left_bottle_loc = bottles_locs[0]
         top_left_bottle_global_loc = self.vision_detector.get_global_pos(top_left_bottle_loc)
         self.click_at(top_left_bottle_global_loc, right=True)  # start filling the next bottle
-        confirmation_btn_center = (360, 320)
-        confirmation_btn_center_global = self.vision_detector.get_global_pos(confirmation_btn_center)
+        # confirmation_btn_center = (360, 320)
+        confirmation_btn_center_global = self.vision_detector.get_global_pos(positions.UZYJ_BUTELKE_CONFIRMATION_BTN)
         self.click_at(confirmation_btn_center_global)  # confirm filling the bottle
         self.hide_eq()
 
@@ -455,8 +458,8 @@ class GameController:
         sleep(0.3)
 
     def login(self):
-        login_btn_center = (400, 300)
-        login_btn_global_center = self.vision_detector.get_global_pos(login_btn_center)
+        # login_btn_center = (400, 300)
+        login_btn_global_center = self.vision_detector.get_global_pos(positions.LOGIN_BTN_CENTER)
         self.load_saved_credentials(idx=self.saved_credentials_idx)
         self.click_at(login_btn_global_center)
         sleep(5)  # wait for character select menu to load
@@ -466,7 +469,8 @@ class GameController:
 
     def load_saved_credentials(self, idx: int):
         # first_load_credentials_btn_center: (440, 360)
-        cred_btn_center = (440, 360 + 40 * (idx))
+        cred_btn_center = positions.LOAD_CREDENTIAL_BTN_CENTER
+        cred_btn_center[1] += idx * 40
         cred_btn_global_center = self.vision_detector.get_global_pos(cred_btn_center)
         self.click_at(cred_btn_global_center)
         logger.debug(f"Credentials loaded successfully\t{idx}")
