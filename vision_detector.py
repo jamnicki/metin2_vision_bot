@@ -25,6 +25,7 @@ from settings import (
     WINDOW_NAME,
     WINDOW_WIDTH,
     ZALOGUJ_BUTTON_FPATH,
+    LOADING_ICON_FPATH,
     BotBind,
     ResourceName,
 )
@@ -47,6 +48,7 @@ class VisionDetector:
             ResourceName.BUTELKA_DYWIZJI_FILLED_MSG.value: self._imread_template(BUTELKA_DYWIZJI_FILLED_MSG_FPATH),
             ResourceName.BUTELKA_DYWIZJI.value: self._imread_gray_template(TEMPLATE_BUTELKA_DYWIZJI_FPATH),
             ResourceName.ZALOGUJ_BUTTON.value: self._imread_template(ZALOGUJ_BUTTON_FPATH),
+            ResourceName.LOADING_ICON.value: self._imread_template(LOADING_ICON_FPATH),
         }
 
         self.hwnd = self.get_window_handler()
@@ -187,6 +189,11 @@ class VisionDetector:
         btn_center = self.get_bbox_center(*loc, *self.get_img_wh(self.target_templates[ResourceName.ZALOGUJ_BUTTON.value]))
         return detected, confidence, btn_center
 
+    def is_loading(self, frame: np.ndarray) -> bool:
+        detected, confidence, loc = self._find_by_template(frame, ResourceName.LOADING_ICON, confidence_threshold=0.8)
+        logger.debug(f"Loading screen {'DETECTED' if detected else 'NOT DETECTED'}\t{confidence=:.2f} {loc=}")
+        return detected
+
     def logged_out(self, frame: np.ndarray) -> bool:
         return self.detect_login_button(frame)[0]
 
@@ -315,8 +322,8 @@ class VisionDetector:
         def _log_imshow_mouse_pos(event, x, y, flags, param):
             preview_mouse_pos = (x, y)
             global_mouse_pos = self.get_global_pos(preview_mouse_pos)
-            logger.debug(f"Preview mouse position: {preview_mouse_pos}")
-            logger.debug(f"Global mouse position: {global_mouse_pos}")
+            logger.trace(f"Preview mouse position: {preview_mouse_pos}")
+            logger.trace(f"Global mouse position: {global_mouse_pos}")
 
         imshow_win_name = (
             f"Capturing Preview - Press [{BotBind.EXIT.value}] or"

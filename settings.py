@@ -35,7 +35,8 @@ class GameBind(Enum):
     CAMERA_ZOOM_OUT = "f"
     
     EQ_MENU = "i"
-    
+    MAP = Key.tab
+
 
 class UserBind(Enum):
     CIECIE_Z_SIODLA = "2"
@@ -60,6 +61,7 @@ class ResourceName(Enum):
     BUTELKA_DYWIZJI = "butelka_dywizji"
     BUTELKA_DYWIZJI_FILLED_MSG = "butelka_dywizji_filled_msg"
     ZALOGUJ_BUTTON = "zaloguj_button"
+    LOADING_ICON = "loading_icon"
 
 
 METIN_MORDERSTWA_70_NAME = "morderstwa_70"
@@ -87,5 +89,6 @@ TEMPLATE_BUTELKA_DYWIZJI_FPATH = ITEMS / "butelka_dywizji.png"
 TEMPLATE_VALIUM_MSG_FPATH = TARGET_TEMPLATES_DIR / "valium_message_lowbar.png"
 BUTELKA_DYWIZJI_FILLED_MSG_FPATH = TARGET_TEMPLATES_DIR / "butelka_dywizji_filled_msg.png"
 ZALOGUJ_BUTTON_FPATH = TARGET_TEMPLATES_DIR / "zaloguj_button.png"
+LOADING_ICON_FPATH = TARGET_TEMPLATES_DIR / "valium_akademia_loading.png"
 
 CAP_MAX_FPS = 30

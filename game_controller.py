@@ -85,11 +85,12 @@ class GameController:
 
         self.eq_visible = False
         self.minimap_visible = True
+        self.map_visible = False
 
     def press_key(self, key):
         self._check_key_value(key)
         self.keyboard.press(key.value)
-        logger.debug(f"Key `{key}` pressed")
+        logger.trace(f"Key `{key}` pressed")
 
     def _reset_controller_attributes(self):
         self.is_running = True
@@ -99,7 +100,7 @@ class GameController:
         self.items_in_range = True
         self.is_polymorphed = False
         self.eq_visible = False
-        self.minimap_visible = True
+        self.minimap_visible = False
 
     def tap_key(self, key, press_time: Optional[float] = None):
         # add extra delay for proper recognition of the key press by game
@@ -111,12 +112,12 @@ class GameController:
             sleep(press_time)
         self.keyboard.release(key.value)
         self._key_release_wait()
-        logger.debug(f"Key `{key}` tapped")
+        logger.trace(f"Key `{key}` tapped")
 
     def release_key(self, key):
         self._check_key_value(key.value)
         self.keyboard.release(key.value)
-        logger.debug(f"Key `{key}` released")
+        logger.trace(f"Key `{key}` released")
     
     def click(self, right: bool = False, times: int = 1, press_time: Optional[float] = None):
         for _ in range(times):
@@ -130,7 +131,7 @@ class GameController:
         else:
             sleep(press_time)
         self.mouse.release(button)
-        logger.debug(f"{'Right' if right else 'Left'} mouse button clicked")
+        logger.trace(f"{'Right' if right else 'Left'} mouse button clicked")
 
     def _press_mouse_btn(self, right=False):
         self.mouse.press(Button.right if right else Button.left)
@@ -140,7 +141,7 @@ class GameController:
 
     def click_at(self, pos: Tuple[int, int], right=False, times: int = 1):
         self.move_cursor_at(pos)
-        sleep(0.2)
+        sleep(0.3)
         self.click(right=right, times=times)
 
     def get_user_position(self, vis_detector: VisionDetector, frame: np.array, indicator_pos) -> Tuple[np.array, Tuple[int, int]]:
@@ -179,9 +180,9 @@ class GameController:
             self._after_mouse_move_wait()
         else:
             sleep(after_move_wait)
-    
-    def change_to_channel(self, channel: int, wait_after_change: float = 1):
-        logger.info(f"Changing the channel to CH{channel}...")
+
+    def change_to_channel(self, channel: int, wait_after_change: float = 2):
+        logger.info(f"Switching to CH{channel}...")
         with self.keyboard.pressed(Key.ctrl_l):
             self.tap_key(getattr(Key, f"f{channel}"))
         self._key_release_wait()  # to prevent pressing other keys too fast
@@ -326,15 +327,15 @@ class GameController:
 
     def _on_click(self, x, y, button, pressed):
         frame_x, frame_y = self.vision_detector.get_frame_pos((x, y))
-        logger.debug(f"Mouse clicked at global: ({x}, {y}) frame: ({frame_x}, {frame_y}) with button `{button}`")
+        logger.trace(f"Mouse clicked at global: ({x}, {y}) frame: ({frame_x}, {frame_y}) with button `{button}`")
 
     def _on_press(self, key):
-        logger.debug(f"Key `{key}` pressed")
+        logger.trace(f"Key `{key}` pressed")
         if key is BotBind.EXIT.value:
             self.exit()
 
     def _on_release(self, key):
-        logger.debug(f"Key `{key}` released")
+        logger.trace(f"Key `{key}` released")
     
     def exit(self):
         logger.info("Exiting...")
@@ -469,11 +470,13 @@ class GameController:
 
     def load_saved_credentials(self, idx: int):
         # first_load_credentials_btn_center: (440, 360)
-        cred_btn_center = positions.LOAD_CREDENTIAL_BTN_CENTER
-        cred_btn_center[1] += idx * 40
+        cred_btn_center = (
+            positions.LOAD_CREDENTIAL_BTN_CENTER[0],
+            positions.LOAD_CREDENTIAL_BTN_CENTER[1] + idx * positions.LOAD_CREDENTIAL_BTN_SPACING
+        )
         cred_btn_global_center = self.vision_detector.get_global_pos(cred_btn_center)
         self.click_at(cred_btn_global_center)
-        logger.debug(f"Credentials loaded successfully\t{idx}")
+        logger.info(f"Credentials loaded successfully\t{idx}")
 
     def open_game(self):
         game_dir = os.path.dirname(self.game_exe_path)  # Assumes the game's working directory is its location.
@@ -485,3 +488,26 @@ class GameController:
     def restart_game(self):
         self.open_game()
         # self._reset_controller_attributes()
+
+    def toggle_map(self):
+        logger.info("Toggling map visibility...")
+        self.tap_key(GameBind.MAP, press_time=1)
+        self._key_release_wait()  # to prevent pressing other keys too fast
+        self.map_visible = not self.map_visible
+    
+    def hide_map(self):
+        if self.map_visible:
+            self.toggle_map()
+
+    def show_map(self):
+        if not self.map_visible:
+            self.toggle_map()
+
+    def teleport_to_polana(self):
+        self.show_map()
+        map_polana_btn_global_center = self.vision_detector.get_global_pos(positions.MAP_POLANA_BTN_CENTER)
+        self.click_at(map_polana_btn_global_center)
+        sleep(6)  # wait for the teleportation to finish
+        # update the map visibility state, but there is no need to actually hide the map,
+        # because the its hidden after the teleportation
+        self.map_visible = False

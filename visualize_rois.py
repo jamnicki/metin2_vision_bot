@@ -12,19 +12,22 @@ frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
 out = frame_rgb
 
-# out = VisionDetector.fill_non_clickable_wth_black(frame_rgb)
+out = VisionDetector.fill_non_clickable_wth_black(frame_rgb)
 out = VisionDetector.mark_bbox(out, *positions.DUNGEON_MSG_BBOX)
 out = VisionDetector.mark_bbox(out, *positions.TARGET_NAME_BBOX)
 
 plt.figure(figsize=(16, 9))
 plt.imshow(out)
 
-# butelki, empty slots
+# mapka lesna polana
+plt.plot([positions.MAP_POLANA_BTN_CENTER[0]], [positions.MAP_POLANA_BTN_CENTER[1]], marker="x", markersize=20, linewidth=1, color="red")
+
+# # butelki, empty slots
 slots_centroids = vision.detect_empty_items_slots(frame_rgb)
 for centroid in slots_centroids:
     plt.plot([centroid[0]], [centroid[1]], marker="o", markersize=10, linewidth=1, color="green")
 
-# buttons eq slots and confirmation menu
+# # buttons eq slots and confirmation menu
 plt.plot([positions.EQ_SLOT1_CENTER[0]], [positions.EQ_SLOT1_CENTER[1]], marker="x", markersize=10, linewidth=1, color="lightblue")
 plt.plot([positions.EQ_SLOT2_CENTER[0]], [positions.EQ_SLOT2_CENTER[1]], marker="x", markersize=10, linewidth=1, color="red")
 plt.plot([positions.EQ_SLOT3_CENTER[0]], [positions.EQ_SLOT3_CENTER[1]], marker="x", markersize=10, linewidth=1, color="pink")

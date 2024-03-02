@@ -14,8 +14,9 @@ from ultralytics import YOLO, checks
 
 from game_controller import GameController, Key
 from settings import CAP_MAX_FPS, MODELS_DIR, WINDOW_HEIGHT, GameBind, UserBind
-from utils import set_logger_level
+from utils import setup_logger
 from vision_detector import VisionDetector
+from utils import channel_generator
 
 
 def gen_next_channel():
@@ -26,7 +27,7 @@ def gen_next_channel():
 
 def main(debug):
     checks()
-    set_logger_level(script_name=Path(__file__).name, level="INFO" if not debug else "DEBUG")
+    setup_logger(script_name=Path(__file__).name, level="INFO" if not debug else "DEBUG")
     run(debug)
 
 
@@ -40,7 +41,7 @@ def run(debug):
     game = GameController(vision_detector=vision, start_delay=5)
     logger.info("Game controller loaded.")
 
-    channel_gen = gen_next_channel()
+    channel_gen = channel_generator(1, 8)
 
     YOLO_CONFIDENCE_THRESHOLD = 0.8
     CHANNEL_TIMEOUT = 20
@@ -59,7 +60,6 @@ def run(debug):
     while game.is_running:
         channel = next(channel_gen)
         game.change_to_channel(channel)
-        logger.info(f"Switching to CH{channel}...")
 
         t0 = perf_counter()
         metin_detected = False
