@@ -250,7 +250,6 @@ class GameController:
     def _after_mouse_move_wait(self):
         sleep(self._after_mouse_move_delay())
     
-
     @staticmethod
     def _start_delay(delay):
         logger.info(f"Starting in {delay} seconds...")
@@ -506,10 +505,12 @@ class GameController:
         self.hide_eq()
 
     def grab_item(self, item_pos: Tuple[int, int]):
+        logger.info(f"Grabbing the item (location on the screen: {item_pos})...")
         self.click_at(item_pos)
         sleep(0.4)
 
     def put_item(self, slot_pos: Tuple[int, int]):
+        logger.info(f"Putting the item to the slot (location on the screen: {slot_pos})...")
         self.click_at(slot_pos)
         sleep(0.4)
 
@@ -526,43 +527,50 @@ class GameController:
 
     def load_saved_credentials(self, idx: int):
         # first_load_credentials_btn_center: (440, 360)
+        logger.info(f"Loading the credentials... ({idx})")
         cred_btn_center = (
             positions.LOAD_CREDENTIAL_BTN_CENTER[0],
             positions.LOAD_CREDENTIAL_BTN_CENTER[1] + idx * positions.LOAD_CREDENTIAL_BTN_SPACING
         )
         cred_btn_global_center = self.vision_detector.get_global_pos(cred_btn_center)
         self.click_at(cred_btn_global_center)
-        logger.info(f"Credentials loaded successfully\t{idx}")
 
-    def open_game(self):
+    def open_game(self, load_wait: float = 30):
+        logger.info("Opening the game...")
         game_dir = os.path.dirname(self.game_exe_path)  # Assumes the game's working directory is its location.
         # Set the working directory to the game's directory and run as admin.
         command = fr'Powershell -Command "&{{Set-Location -Path {game_dir}; Start-Process "{self.game_exe_path}" -Verb RunAs}}"'
         os.system(command)
-        sleep(30)  # wait for the game to load
+        logger.debug(f"Waiting for the game to load... ({load_wait}s)")
+        sleep(load_wait)  # wait for the game to load
 
     def restart_game(self):
+        logging.info("Restarting the game...")
         self.open_game()
 
     def toggle_map(self):
-        logger.info("Toggling map visibility...")
+        logger.debug("Toggling map visibility...")
         self.tap_key(GameBind.MAP, press_time=1)
         self._key_release_wait()  # to prevent pressing other keys too fast
         self.map_visible = not self.map_visible
     
     def hide_map(self):
+        logger.info("Hiding the map...")
         if self.map_visible:
             self.toggle_map()
 
     def show_map(self):
+        logger.info("Showing the map...")
         if not self.map_visible:
             self.toggle_map()
 
-    def teleport_to_polana(self):
+    def teleport_to_polana(self, after_tp_wait: float = 10):
+        logger.info("Teleporting to Leśna Polana...")
         self.show_map()
         map_polana_btn_global_center = self.vision_detector.get_global_pos(positions.MAP_POLANA_BTN_CENTER)
         self.click_at(map_polana_btn_global_center)
-        sleep(10)  # wait for the teleportation to finish
+        logger.debug(f"Waiting for the teleportation to finish... ({after_tp_wait}s)")
+        sleep(after_tp_wait)  # wait for the teleportation to finish
         # update the map visibility state, but there is no need to actually hide the map,
         # because the its hidden after the teleportation
         self.map_visible = False

@@ -1,4 +1,5 @@
 import sys
+import click
 from itertools import cycle
 from pathlib import Path
 from random import choice
@@ -10,7 +11,8 @@ import numpy as np
 import spacy
 from loguru import logger
 from torch import where as torch_where
-from ultralytics import YOLO, checks
+from ultralytics import YOLO
+from ultralytics import checks as yolo_checks
 
 from game_controller import GameController, Key
 from settings import CAP_MAX_FPS, MODELS_DIR, WINDOW_HEIGHT, GameBind, UserBind
@@ -19,14 +21,24 @@ from vision_detector import VisionDetector
 from utils import channel_generator
 
 
-def main(debug):
-    checks()
-    setup_logger(script_name=Path(__file__).name, level="INFO" if not debug else "DEBUG")
-    run(debug)
+@click.command()
+@click.option("--event", is_flag=True, help="Enable event mode (+2 metins)")
+@click.option("--log-level",
+              default="INFO",
+              show_default=True,
+              type=click.Choice(["TRACE", "DEBUG", "INFO"], case_sensitive=False),
+              help="Set the logging level."
+)
+def main(event, log_level):
+    log_level = log_level.upper()
+    yolo_checks()
+    setup_logger(script_name=Path(__file__).name, level=log_level)
+    run(event, log_level)
 
 
-def run(debug):
+def run(event, log_level):
     yolo = YOLO(MODELS_DIR / "valium_idle_metiny_yolov8s.pt")
+    yolo_verbose = log_level in ["TRACE", "DEBUG"]
     logger.info("YOLO model loaded.")
 
     vision = VisionDetector()
@@ -83,21 +95,21 @@ def run(debug):
                     continue
                 continue
 
-            frame_after_poly_det, polymorphed = vision.is_polymorphed(frame=vision.capture_frame())
+            _, polymorphed = vision.is_polymorphed(frame=vision.capture_frame())
             if not polymorphed:
                 game.toggle_skill(UserBind.AURA, reset_animation=False)
                 game.use_polymorph()
 
             if perf_counter() - t0 > CHANNEL_TIMEOUT:
                 timed_out = True
-                logger.warning(f"Metin not found. Switching to next channel...")
+                logger.warning(f"Timeout ({CHANNEL_TIMEOUT}s). Switching to the next channel...")
                 break
 
             latest_frame = vision.capture_frame()
             yolo_results = yolo.predict(
                 source=VisionDetector.fill_non_clickable_wth_black(latest_frame),
                 conf=YOLO_CONFIDENCE_THRESHOLD,
-                verbose=debug
+                verbose=yolo_verbose
             )[0]
             any_yolo_results = len(yolo_results.boxes.cls) > 0
             metins_idxs = torch_where(yolo_results.boxes.cls == METIN_CLS)
@@ -124,7 +136,11 @@ def run(debug):
 
         game.start_attack()
         game.idle(METIN_DESTROY_TIME, pickup=True)
+        if event:
+            game.idle(1, pickup=True)
         game.pickup_many(uses=2)
+        if event:
+            game.pickup_many(uses=1)
         game.stop_attack()
 
         butelka_dywizji_filled = vision.detect_butelka_dywizji_filled_message(frame=vision.capture_frame())
@@ -134,5 +150,5 @@ def run(debug):
 
 
 if __name__ == '__main__':
-    main(debug=True)
+    main()
     logger.success("Bot terminated.")

@@ -28,6 +28,7 @@ from settings import (
     LOADING_ICON_FPATH,
     BotBind,
     ResourceName,
+    WINDOW_NOT_FOUND_EXIT_DELAY,
 )
 import positions
 
@@ -202,6 +203,8 @@ class VisionDetector:
             self.reload_window_handler()
         except WindowNotFoundError as e:
             logger.error(e)
+            logger.error(f"Exiting in {WINDOW_NOT_FOUND_EXIT_DELAY}s ...")
+            sleep(WINDOW_NOT_FOUND_EXIT_DELAY)
             return None
 
         # Move the window to the specified position (initial position from first run)
