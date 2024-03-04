@@ -4,6 +4,9 @@ import time
 from loguru import logger
 from itertools import cycle
 from pathlib import Path
+from typing import NewType
+
+Success = NewType("Success", bool)
 
 
 def setup_logger(script_name: str, level: str):

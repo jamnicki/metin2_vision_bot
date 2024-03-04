@@ -19,12 +19,6 @@ from vision_detector import VisionDetector
 from utils import channel_generator
 
 
-def gen_next_channel():
-    channels_cycle = cycle(list(range(1, 9)))
-    while True:
-        yield next(channels_cycle)
-
-
 def main(debug):
     checks()
     setup_logger(script_name=Path(__file__).name, level="INFO" if not debug else "DEBUG")
@@ -38,7 +32,7 @@ def run(debug):
     vision = VisionDetector()
     logger.info("Vision detector loaded.")
 
-    game = GameController(vision_detector=vision, start_delay=5)
+    game = GameController(vision_detector=vision, start_delay=2)
     logger.info("Game controller loaded.")
 
     channel_gen = channel_generator(1, 8)
@@ -55,11 +49,13 @@ def run(debug):
     METIN_DESTROY_TIME = 3  # upadku polana | poly + masne eq + IS
 
     game.calibrate_camera()
-    game.move_camera_down(press_time=0.8)
+    game.move_camera_down(press_time=0.7)
 
     while game.is_running:
         channel = next(channel_gen)
         game.change_to_channel(channel)
+        
+        game.use_boosters()
 
         t0 = perf_counter()
         metin_detected = False
@@ -68,16 +64,26 @@ def run(debug):
             frame = vision.capture_frame()
             if frame is None:
                 game.restart_game()
-                game.calibrate_camera()
-                game.move_camera_down(press_time=0.8)
+                stage3_first_frame = True
                 continue
 
             if vision.logged_out(frame):
                 logger.warning("Logged out. Re-logging...")
                 game.login()
+                sleep(3)  # wait out relogging blockage
+                game.change_to_channel(next(channel_gen))  # change channel to reset dungeon map; handles the infinite relogging loop
                 continue
 
-            frame_after_poly_det, polymorphed = vision.is_polymorphed(frame)
+            if vision.is_loading(frame=vision.capture_frame()):
+                sleep(10)
+                if vision.is_loading(frame=vision.capture_frame()):
+                    logger.warning("Loading is taking too long (>10s), something is wrong. Escaping to logging menu...")
+                    game.tap_key(Key.esc, press_time=2)
+                    sleep(5)
+                    continue
+                continue
+
+            frame_after_poly_det, polymorphed = vision.is_polymorphed(frame=vision.capture_frame())
             if not polymorphed:
                 game.toggle_skill(UserBind.AURA, reset_animation=False)
                 game.use_polymorph()
@@ -87,17 +93,13 @@ def run(debug):
                 logger.warning(f"Metin not found. Switching to next channel...")
                 break
 
+            latest_frame = vision.capture_frame()
             yolo_results = yolo.predict(
-                source=VisionDetector.fill_non_clickable_wth_black(frame_after_poly_det),
+                source=VisionDetector.fill_non_clickable_wth_black(latest_frame),
                 conf=YOLO_CONFIDENCE_THRESHOLD,
                 verbose=debug
             )[0]
             any_yolo_results = len(yolo_results.boxes.cls) > 0
-            if not any_yolo_results:
-                logger.warning(f"Metin not found. Looking around, retrying...")
-                game.move_camera_right(press_time=LOOKING_AROUND_MOVE_CAMERA_PRESS_TIME)
-                continue
-
             metins_idxs = torch_where(yolo_results.boxes.cls == METIN_CLS)
             metin_detected = metins_idxs[0].shape[0] > 0
             logger.error(f"{metins_idxs=} {metin_detected=}")
@@ -120,14 +122,9 @@ def run(debug):
 
         sleep(WALK_TO_METIN_TIME)
 
-        game.use_boosters()
         game.start_attack()
-
-        partial_destroy_time = METIN_DESTROY_TIME / 2 - 1  # -2 because of pickup time
-        sleep(partial_destroy_time)
-        game.pickup_many()
-        sleep(partial_destroy_time)
-        game.pickup_many()
+        game.idle(METIN_DESTROY_TIME, pickup=True)
+        game.pickup_many(uses=2)
         game.stop_attack()
 
         butelka_dywizji_filled = vision.detect_butelka_dywizji_filled_message(frame=vision.capture_frame())

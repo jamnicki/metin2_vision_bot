@@ -36,6 +36,7 @@ class GameBind(Enum):
     
     EQ_MENU = "i"
     MAP = Key.tab
+    SETTINGS = Key.esc
 
 
 class UserBind(Enum):

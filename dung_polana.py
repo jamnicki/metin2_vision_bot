@@ -3,6 +3,7 @@ import sys
 from pathlib import Path
 from random import choice
 from time import perf_counter, sleep
+from datetime import timedelta
 from typing import Tuple
 from warnings import filterwarnings
 
@@ -25,19 +26,6 @@ from settings import CAP_MAX_FPS, MODELS_DIR, WINDOW_HEIGHT, GameBind, UserBind
 from utils import setup_logger
 from vision_detector import VisionDetector
 from utils import channel_generator
-
-
-def _before_next_frame(game, vision, frame, cap_t0):
-    # vision.show_preview(vision.scale_frame(frame, scale=0.8))
-    game.pickup()
-    game.use_boosters()
-
-    # compute_time = perf_counter() - cap_t0
-    # curr_fps = 1 / compute_time
-    # logger.debug(f"FPS: {curr_fps:<2.2f}")
-
-    # cap_wait = max(0, 1 / CAP_MAX_FPS - compute_time)
-    # sleep(cap_wait)
 
 
 @click.command()
@@ -63,7 +51,8 @@ def main(stage, log_level):
         "\n\t- the character is standing,"
         "\n\t- minimap is visible,"
         "\n\t- equipment window is closed,"
-        "\n\nPress [Enter] to continue or [q] to terminate...\n"
+        "\n\t- chat messages are turned off"
+        "\n\nPress [Enter] to continue or [q] to terminate...\n > "
     )
     if "q" in q.lower():
         logger.warning("Terminated by user.")
@@ -87,17 +76,20 @@ def run(stage, log_level):
     game.hide_minimap()
 
     REENTER_WAIT = 4
-    YOLO_CONFIDENCE_THRESHOLD = 0.7
+    YOLO_CONFIDENCE_THRESHOLD = 0.8
+    YOLO_METIN_CONFIDENCE_THRESHOLD = 0.85
     NONSENSE_MSG_SIMILARITY_THRESHOLD = 0
-    STAGE_NAMES = ["before_enter", "stage_200_mobs", "stage_3_minibosses", "stage_5_metins", "stage_item_drop", "stage_boss"]
+    STAGE_NAMES = ["before_enter", "stage_200_mobs", "stage_minibosses", "stage_metins", "stage_item_drop", "stage_boss"]
     STAGE_TIMEOUT = [
-        60,       # before_enter
+        90,       # before_enter
         60 * 3,   # stage_200_mobs
-        60 * 3,       # stage_3_minibosses
-        60 * 3,   # stage_5_metins
-        60 * 3,   # stage_item_drop
-        60 * 3,   # stage_boss
+        60 * 3,   # stage_minibosses
+        60 * 7,   # stage_metins
+        60 * 5,   # stage_item_drop
+        60 * 5,   # stage_boss
     ]
+    WALK_TIME_TO_METIN = 10
+    METIN_DESTROY_TIME = 30
 
     stage1_task_msg = "Pokonajcie 200 potworów."
     stage2_task_msg = "Pokonajcie wszystkie bossy."
@@ -106,14 +98,13 @@ def run(stage, log_level):
     stage5_task_msg = "Pokonajcie bossa."
 
     stage_enter_times = [-1] * 6
-
     stage_first_times = [True] * 6
     curr_fps = 0
     destroyed_metins = 0
     metin_detected = False
     stage3_first_frame = True
     while game.is_running:
-        logger.debug(f"Stage: {STAGE_NAMES[stage]}")
+        logger.debug(f"Stage {STAGE_NAMES[stage]} ({stage})")
         cap_t0 = perf_counter()
 
         frame = vision.capture_frame()
@@ -133,14 +124,14 @@ def run(stage, log_level):
             sleep(10)
             if vision.is_loading(frame=vision.capture_frame()):
                 logger.warning("Loading is taking too long (>10s), something is wrong. Escaping to logging menu...")
-                game.tap_key(Key.esc)
+                game.tap_key(Key.esc, press_time=2)
                 sleep(5)
                 continue
             continue
 
-        frame_contains_valium_msg = vision.frame_contains_valium_message(frame)
+        frame_contains_valium_msg = vision.frame_contains_valium_message(frame=vision.capture_frame())
         if frame_contains_valium_msg:
-            butelka_dywizji_filled = vision.detect_butelka_dywizji_filled_message(frame)
+            butelka_dywizji_filled = vision.detect_butelka_dywizji_filled_message(frame=vision.capture_frame())
             if butelka_dywizji_filled:
                 game.move_full_butelka_dywizji()
                 game.use_next_butelka_dywizji()
@@ -153,13 +144,14 @@ def run(stage, log_level):
 
         frame_after_poly_det, polymorphed = vision.is_polymorphed(frame)
 
-        yolo_results = yolo.predict(
-            source=VisionDetector.fill_non_clickable_wth_black(frame_after_poly_det),
-            conf=YOLO_CONFIDENCE_THRESHOLD,
-            verbose=yolo_verbose
-        )[0]
-        any_yolo_results = len(yolo_results.boxes.cls) > 0
-        frame_wth_yolo_dets = yolo_results.plot(line_width=2, font_size=18)
+        # latest_frame = vision.capture_frame()
+        # yolo_results = yolo.predict(
+        #     source=VisionDetector.fill_non_clickable_wth_black(latest_frame),
+        #     conf=YOLO_CONFIDENCE_THRESHOLD,
+        #     verbose=yolo_verbose
+        # )[0]
+        # any_yolo_results = len(yolo_results.boxes.cls) > 0
+        # frame_wth_yolo_dets = yolo_results.plot(line_width=2, font_size=18)
 
 
         # =============================== START ===============================
@@ -168,17 +160,31 @@ def run(stage, log_level):
 
         dung_npc_cls = 1
         stage0_timed_out = False
-        if stage == 0:
+        if STAGE_NAMES[stage] == "before_enter":
             if stage_first_times[stage]:
                 stage_first_times[stage] = False
                 stage_enter_times[stage] = perf_counter()
+                game.unmount()
                 game.calibrate_camera()
                 game.zoomin_camera(press_time=0.3)
                 game.move_camera_down(press_time=0.8)
+                sleep(1)  # wait for the camera to stabilize before capturing the frame
+
+            latest_frame = vision.capture_frame()
+            yolo_results = yolo.predict(
+                source=VisionDetector.fill_non_clickable_wth_black(latest_frame),
+                conf=YOLO_CONFIDENCE_THRESHOLD,
+                verbose=yolo_verbose
+            )[0]
+            any_yolo_results = len(yolo_results.boxes.cls) > 0
 
             if stage_enter_times[stage] != -1 and perf_counter() - stage_enter_times[stage] > STAGE_TIMEOUT[stage]:
+                game.tap_key(Key.enter)  # in case the npc dialog is open
+                sleep(2)
+                game.tap_key(Key.enter)
+                sleep(5)
                 stage1_timed_out = True
-                logger.warning(f"Stage {stage}  |  Timeout ({STAGE_TIMEOUT[stage]}s). Teleporting to NPC and starting over...")
+                logger.warning(f"Stage {STAGE_NAMES[stage]} ({stage})  |  Timeout ({STAGE_TIMEOUT[stage]}s). Teleporting to NPC and starting over...")
                 game.teleport_to_polana()
                 sleep(3)  # wait out relogging blockage
                 game.change_to_channel(next(channel_gen))  # change channel to reset dungeon map; handles the infinite relogging loop
@@ -191,7 +197,7 @@ def run(stage, log_level):
                 continue
 
             if not any_yolo_results or dung_npc_cls not in yolo_results.boxes.cls:
-                logger.warning(f"Stage {stage}  |  Dungeon NPC not found. Retrying...")
+                logger.warning(f"Stage {STAGE_NAMES[stage]} ({stage})  |  Dungeon NPC not found. Retrying...")
                 game.move_camera_left(press_time=0.6)
                 frame = vision.capture_frame()
                 if frame is None:
@@ -203,9 +209,9 @@ def run(stage, log_level):
                     game.login()
                     continue
 
-                frame_contains_valium_msg = vision.frame_contains_valium_message(frame)
+                frame_contains_valium_msg = vision.frame_contains_valium_message(frame=vision.capture_frame())
                 if frame_contains_valium_msg:
-                    butelka_dywizji_filled = vision.detect_butelka_dywizji_filled_message(frame)
+                    butelka_dywizji_filled = vision.detect_butelka_dywizji_filled_message(frame=vision.capture_frame())
                     if butelka_dywizji_filled:
                         game.move_full_butelka_dywizji()
                         game.use_next_butelka_dywizji()
@@ -213,12 +219,6 @@ def run(stage, log_level):
                     sleep(5)
                     continue
 
-                yolo_results = yolo.predict(
-                    source=VisionDetector.fill_non_clickable_wth_black(frame),
-                    conf=YOLO_CONFIDENCE_THRESHOLD,
-                    verbose=yolo_verbose
-                )[0]
-                _before_next_frame(game, vision, frame, cap_t0)
                 continue
 
             logger.debug(f"{yolo_results.boxes.cls=}")
@@ -238,23 +238,28 @@ def run(stage, log_level):
 
             dung_message = VisionDetector.get_dungeon_message(frame=vision.capture_frame())
             msg_similarity = nlp(dung_message).similarity(nlp(stage1_task_msg))
-            first_stage_task_msg_visible = msg_similarity > 0.65  # both task messages are very similar!
-            logger.debug(f"Stage {stage}  | {dung_message=} {msg_similarity=:.3f}")
+            first_stage_task_msg_visible = msg_similarity > 0.6
+            logger.debug(f"Stage {STAGE_NAMES[stage]} ({stage})  | {dung_message=} {msg_similarity=:.3f}")
+            logger.debug(f"Stage {STAGE_NAMES[stage]} ({stage})  | {first_stage_task_msg_visible=} {stage1_task_msg=}")
             if first_stage_task_msg_visible:
                 stage = 1
                 logger.success("Dungeon entered. Starting the stages sequence.")
+                continue
 
         # STAGE 1
 
-        if stage == 1:
-            game.calibrate_camera()
+        if STAGE_NAMES[stage] == "stage_200_mobs":
+            if stage_first_times[stage]:
+                game.polymorph_off()
+                game.calibrate_camera()
+                game.mount()
 
             stage1_all_mobs_killed = False
             stage1_timed_out = False
             while not stage1_all_mobs_killed:
                 if stage_enter_times[stage] != -1 and perf_counter() - stage_enter_times[stage] > STAGE_TIMEOUT[stage]:
                     stage1_timed_out = True
-                    logger.warning(f"Stage {stage}  |  Timeout ({STAGE_TIMEOUT[stage]}s). Teleporting to NPC and starting over...")
+                    logger.warning(f"Stage {STAGE_NAMES[stage]} ({stage})  |  Timeout ({STAGE_TIMEOUT[stage]}s). Teleporting to NPC and starting over...")
                     game.teleport_to_polana()
                     sleep(3)  # wait out relogging blockage
                     game.change_to_channel(next(channel_gen))  # change channel to reset dungeon map; handles the infinite relogging loop
@@ -266,29 +271,18 @@ def run(stage, log_level):
                     stage3_first_frame = True
                     break
 
-                # attack for 1 seconds while mounted
-                game.polymorph_off()
-                game.mount()
-                game.lure()
+                # attack for 20 seconds while mounted
+                game.use_boosters()
                 game.start_attack()
-                sleep(10)
+                game.lure_many()
+                game.idle(time=20, lure=True, pickup=True, turn_randomly=True)
+                game.move_camera_left(press_time=0.7)
                 game.stop_attack()
 
                 # steer randomly for 2 seconds (escape the ghost mobs that are attacking)
                 game.press_key(GameBind.CIECIE_Z_SIODLA)
-                steer_key1 = choice([GameBind.MOVE_FORWARD, GameBind.MOVE_BACKWARD])
-                steer_key2 = choice([GameBind.MOVE_LEFT, GameBind.MOVE_RIGHT])
-                game.press_key(steer_key1)
-                game.press_key(steer_key2)
-                sleep(2)
+                game.steer_randomly(press_time=2)
                 game.release_key(GameBind.CIECIE_Z_SIODLA)
-                game.release_key(steer_key1)
-                game.release_key(steer_key2)
-
-                # change character direction and pickup
-                game.move_camera_left(press_time=0.7)
-                game.turn_randomly()
-                game.pickup()
 
                 frame = vision.capture_frame()
                 if frame is None:
@@ -300,9 +294,9 @@ def run(stage, log_level):
                     game.login()
                     continue
 
-                frame_contains_valium_msg = vision.frame_contains_valium_message(frame)
+                frame_contains_valium_msg = vision.frame_contains_valium_message(frame=vision.capture_frame())
                 if frame_contains_valium_msg:
-                    butelka_dywizji_filled = vision.detect_butelka_dywizji_filled_message(frame)
+                    butelka_dywizji_filled = vision.detect_butelka_dywizji_filled_message(frame=vision.capture_frame())
                     if butelka_dywizji_filled:
                         game.move_full_butelka_dywizji()
                         game.use_next_butelka_dywizji()
@@ -310,28 +304,28 @@ def run(stage, log_level):
                     sleep(5)
                     continue
 
-                dung_message = VisionDetector.get_dungeon_message(frame)
+                dung_message = VisionDetector.get_dungeon_message(frame=vision.capture_frame())
                 msg_similarity = nlp(dung_message).similarity(nlp(stage2_task_msg))
-                next_task_msg = msg_similarity > 0.6
-                logger.debug(f"Stage {stage}  | {dung_message=} {msg_similarity=:.3f}")
+                next_task_msg = msg_similarity > 0.75
+                logger.debug(f"Stage {STAGE_NAMES[stage]} ({stage})  | {dung_message=} {msg_similarity=:.3f}")
+                logger.debug(f"Stage {STAGE_NAMES[stage]} ({stage})  | {next_task_msg=} {stage2_task_msg=}")
                 if next_task_msg:
                     stage1_all_mobs_killed = True
                     game.pickup_many()
                     game.stop_attack()
                     game.unmount()
                     stage = 2
-                    logger.success("Stage 1 completed.")
+                    logger.success(f"Stage 'stage_200_mobs' (1) completed.")
                     sleep(2)  # wait for the next stage to load
                     break
 
-                logger.debug(f"Stage {stage}  |  {stage_first_times=}")
-                logger.debug(f"Stage {stage}  |  {stage_enter_times=}")
+                logger.debug(f"Stage {STAGE_NAMES[stage]} ({stage})  |  {stage_first_times=}")
+                logger.debug(f"Stage {STAGE_NAMES[stage]} ({stage})  |  {stage_enter_times=}")
                 if stage_first_times[stage] and stage_enter_times[stage] == -1:
                     stage_first_times[stage] = False
                     stage_enter_times[stage] = perf_counter()
 
-                logger.debug(f"Stage {stage}  | Not all mobs killed. Keep attacking...")
-                _before_next_frame(game, vision, frame_wth_yolo_dets, cap_t0)
+                logger.debug(f"Stage {STAGE_NAMES[stage]} ({stage})  | Not all mobs killed. Keep attacking...")
                 continue
 
             game.pickup_many()
@@ -342,7 +336,7 @@ def run(stage, log_level):
                 continue
 
 
-        if stage == 2:
+        if STAGE_NAMES[stage] == "stage_minibosses":
             # - zabij 3 bossy
             #     - lure
             #     - use passive skills
@@ -352,15 +346,15 @@ def run(stage, log_level):
             #     - pickup
             #     aż do wykrycia następneg komunikatu
 
-            game.lure_many()
-            game.toggle_passive_skills()
+            if stage_first_times[stage]:
+                game.use_polymorph()
 
             stage2_all_minibosses_killed = False
             stage2_timed_out = False
             while not stage2_all_minibosses_killed:
                 if stage_enter_times[stage] != -1 and perf_counter() - stage_enter_times[stage] > STAGE_TIMEOUT[stage]:
                     stage2_timed_out = True
-                    logger.warning(f"Stage {stage}  |  Timeout ({STAGE_TIMEOUT[stage]}s). Teleporting to NPC and starting over...")
+                    logger.warning(f"Stage {STAGE_NAMES[stage]} ({stage})  |  Timeout ({STAGE_TIMEOUT[stage]}s). Teleporting to NPC and starting over...")
                     game.teleport_to_polana()
                     sleep(3)  # wait out relogging blockage
                     game.change_to_channel(next(channel_gen))  # change channel to reset dungeon map; handles the infinite relogging loop
@@ -372,9 +366,11 @@ def run(stage, log_level):
                     stage3_first_frame = True
                     break
 
-                game.use_polymorph()
                 game.start_attack()
                 game.lure()
+                game.pickup()
+                game.turn_randomly()
+
                 frame = vision.capture_frame()
                 if frame is None:
                     game.restart_game()
@@ -385,9 +381,9 @@ def run(stage, log_level):
                     game.login()
                     continue
 
-                frame_contains_valium_msg = vision.frame_contains_valium_message(frame)
+                frame_contains_valium_msg = vision.frame_contains_valium_message(frame=vision.capture_frame())
                 if frame_contains_valium_msg:
-                    butelka_dywizji_filled = vision.detect_butelka_dywizji_filled_message(frame)
+                    butelka_dywizji_filled = vision.detect_butelka_dywizji_filled_message(frame=vision.capture_frame())
                     if butelka_dywizji_filled:
                         game.move_full_butelka_dywizji()
                         game.use_next_butelka_dywizji()
@@ -395,22 +391,18 @@ def run(stage, log_level):
                     sleep(5)
                     continue
                 
-                dung_message = VisionDetector.get_dungeon_message(frame)
+                dung_message = VisionDetector.get_dungeon_message(frame=vision.capture_frame())
                 msg_similarity = nlp(dung_message).similarity(nlp(stage3_task_msg))
-                next_task_msg = msg_similarity > 0.6
-                logger.debug(f"Stage {stage}  | {dung_message=} ({msg_similarity=:.3f})")
+                next_task_msg = msg_similarity > 0.85
+                logger.debug(f"Stage {STAGE_NAMES[stage]} ({stage})  | {dung_message=} ({msg_similarity=:.3f})")
+                logger.debug(f"Stage {STAGE_NAMES[stage]} ({stage})  | {next_task_msg=} {stage3_task_msg=}")
                 if next_task_msg:
                     stage2_all_minibosses_killed = True
-                    _before_next_frame(game, vision, frame, cap_t0)
                     break
 
-                game.turn_randomly()
-                game.pickup()
-                game.lure()
-                game.lure()
 
-                logger.debug(f"Stage {stage}  |  {stage_first_times=}")
-                logger.debug(f"Stage {stage}  |  {stage_enter_times=}")
+                logger.debug(f"Stage {STAGE_NAMES[stage]} ({stage})  |  {stage_first_times=}")
+                logger.debug(f"Stage {STAGE_NAMES[stage]} ({stage})  |  {stage_enter_times=}")
                 if stage_first_times[stage] and stage_enter_times[stage] == -1:
                     stage_first_times[stage] = False
                     stage_enter_times[stage] = perf_counter()
@@ -419,16 +411,15 @@ def run(stage, log_level):
                 continue
 
             game.stop_attack()
-            game.polymorph_off()
 
-            logger.success("Stage 2 completed.")
+            logger.success("Stage 'stage_minibosses' (2) completed.")
             stage = 3
             sleep(10)  # wait for the next stage to load
             continue
 
 
         metin_cls = 0
-        if stage == 3:
+        if STAGE_NAMES[stage] == "stage_metins":
             # - zniszcz 5 metinów
             #     - kamera na skos wykrywanie
             #     - obrót w lewo; next frame; sprawdz czy metin TAK: atakuj NIe: repeat
@@ -439,21 +430,22 @@ def run(stage, log_level):
             #     - sleep(1)
             #     - sprawdz czy komunikat z stage o metinach zniknął TAK: git, lecim dalej NIE: kurwa nie wiem
 
-            dung_message = VisionDetector.get_dungeon_message(frame)
+            dung_message = VisionDetector.get_dungeon_message(frame=vision.capture_frame())
             msg_similarity = nlp(dung_message).similarity(nlp(stage4_task_msg))
-            next_task_msg = msg_similarity > 0.6
-            logger.debug(f"Stage {stage}  | {dung_message=} ({msg_similarity=:.3f})")
+            next_task_msg = msg_similarity > 0.8
+            logger.debug(f"Stage {STAGE_NAMES[stage]} ({stage})  | {dung_message=} ({msg_similarity=:.3f})")
+            logger.debug(f"Stage {STAGE_NAMES[stage]} ({stage})  | {next_task_msg=} {stage4_task_msg=}")
             if next_task_msg:
                 game.polymorph_off()
                 game.pickup_many()
 
-                logger.success("Stage 3 completed.")
+                logger.success("Stage 'stage_metins' (3) completed.")
                 stage = 4
                 sleep(4)  # wait for the next stage to load
                 continue
 
-            if stage_enter_times[stage] != -1 and perf_counter() - stage_enter_times[stage] > STAGE_TIMEOUT[stage]:
-                logger.warning(f"Stage {stage}  |  Timeout ({STAGE_TIMEOUT[stage]}s). Teleporting to NPC and starting over...")
+            if not stage_first_times[stage] and stage_enter_times[stage] != -1 and perf_counter() - stage_enter_times[stage] > STAGE_TIMEOUT[stage]:
+                logger.warning(f"Stage {STAGE_NAMES[stage]} ({stage})  |  Timeout ({STAGE_TIMEOUT[stage]}s). Teleporting to NPC and starting over...")
                 game.teleport_to_polana()
                 sleep(3)  # wait out relogging blockage
                 game.change_to_channel(next(channel_gen))  # change channel to reset dungeon map; handles the infinite relogging loop
@@ -466,27 +458,45 @@ def run(stage, log_level):
                 continue
 
             if stage_first_times[stage]:
+                obstacle_avoided = False
                 stage_first_times[stage] = False
+                stage_enter_times[stage] = perf_counter()
                 game.calibrate_camera()
-                game.zoomin_camera(press_time=0.1)
+                # game.zoomin_camera(press_time=0.1)
                 game.move_camera_down(press_time=0.8)
+                sleep(1)  # wait for the camera to stabilize before capturing the frame
 
+            logger.debug(f"Stage {STAGE_NAMES[stage]} ({stage})  |  {stage_first_times=}")
+            logger.debug(f"Stage {STAGE_NAMES[stage]} ({stage})  |  {stage_enter_times=}")
+
+            latest_frame = vision.capture_frame()
+            yolo_results = yolo.predict(
+                source=VisionDetector.fill_non_clickable_wth_black(latest_frame),
+                conf=YOLO_METIN_CONFIDENCE_THRESHOLD,
+                verbose=yolo_verbose
+            )[0]
+            any_yolo_results = len(yolo_results.boxes.cls) > 0
             if not any_yolo_results:
                 if destroyed_metins == 0:
                     game.move_camera_right(press_time=0.20)
                 else:
-                    game.move_camera_left(press_time=0.70)
-                logger.warning(f"Stage {stage}  |  Metin not found. Looking around, retrying...")
-                _before_next_frame(game, vision, frame, cap_t0)
+                    game.move_camera_left(press_time=0.3)
+                logger.warning(f"Stage {STAGE_NAMES[stage]} ({stage})  |  Metin not found. Looking around, retrying...")
+                continue
+
+            if not obstacle_avoided and destroyed_metins == 0:
+                # avoid the obstacle
+                game.steer_up_right(press_time=1)
+                game.move_camera_left(press_time=0.5)
+                obstacle_avoided = True
                 continue
 
             metins_idxs = torch_where(yolo_results.boxes.cls == metin_cls)
             metin_detected = metins_idxs[0].shape[0] > 0
-            logger.debug(f"Stage {stage}  |  {metins_idxs=} {metin_detected=}")
+            logger.debug(f"Stage {STAGE_NAMES[stage]} ({stage})  |  {metins_idxs=} {metin_detected=}")
             if not metin_detected:
-                game.move_camera_right(press_time=0.5)
-                logger.warning(f"Stage {stage}  |  Metin not found. Looking around, retrying...")
-                _before_next_frame(game, vision, frame, cap_t0)
+                game.move_camera_left(press_time=0.3)
+                logger.warning(f"Stage {STAGE_NAMES[stage]} ({stage})  |  Metin not found. Looking around, retrying...")
                 continue
 
             metins_xywh = yolo_results.boxes.xywh[metins_idxs]
@@ -501,29 +511,19 @@ def run(stage, log_level):
 
             game.click_at(closest_metin_center_global)
 
-            walk_to_metin_time = 7
-            sleep(walk_to_metin_time)
+            sleep(WALK_TIME_TO_METIN)
 
             game.start_attack()
-
-            metin_destroy_time = 25  # poly + masne eq + IS
-            sleep(metin_destroy_time)
+            game.idle(time=METIN_DESTROY_TIME, pickup=True, use_boosters=True)
             game.stop_attack()
 
             destroyed_metins += 1
             metin_detected = False
             game.pickup_many()
-            logger.debug(f"Stage {stage}  |  {destroyed_metins=}")
-            _before_next_frame(game, vision, frame, cap_t0)
-
-            logger.debug(f"Stage {stage}  |  {stage_first_times=}")
-            logger.debug(f"Stage {stage}  |  {stage_enter_times=}")
-            if stage_first_times[stage] and stage_enter_times[stage] == -1:
-                stage_first_times[stage] = False
-                stage_enter_times[stage] = perf_counter()
+            logger.debug(f"Stage {STAGE_NAMES[stage]} ({stage})  |  {destroyed_metins=}")
 
 
-        if stage == 4:
+        if STAGE_NAMES[stage] == "stage_item_drop":
             # - znajdz liscie i użyj je
             #     - lure
             #     - mount; start_attack
@@ -539,7 +539,7 @@ def run(stage, log_level):
             while not next_stage_act_item_found:
                 if stage_enter_times[stage] != -1 and perf_counter() - stage_enter_times[stage] > STAGE_TIMEOUT[stage]:
                     stage4_timed_out = True
-                    logger.warning(f"Stage {stage}  |  Timeout ({STAGE_TIMEOUT[stage]}s). Teleporting to NPC and starting over...")
+                    logger.warning(f"Stage {STAGE_NAMES[stage]} ({stage})  |  Timeout ({STAGE_TIMEOUT[stage]}s). Teleporting to NPC and starting over...")
                     game.teleport_to_polana()
                     sleep(3)  # wait out relogging blockage
                     game.change_to_channel(next(channel_gen))  # change channel to reset dungeon map; handles the infinite relogging loop
@@ -551,24 +551,30 @@ def run(stage, log_level):
                     stage3_first_frame = True
                     break
 
-                game.show_eq()
+                game.show_eq_slot(1)
+
+                # attack for 20 seconds while mounted
+                game.use_boosters()
                 game.start_attack()
-                game.lure()
-                game.pickup_many(uses=3)
+                game.lure_many()
+                game.idle(time=10, lure=True, pickup=True, turn_randomly=True)
+                game.move_camera_left(press_time=0.7)
+                game.stop_attack()
+                game.pickup_many()
 
                 frame = vision.capture_frame()
                 if frame is None:
                     game.restart_game()
                     continue
 
-                if vision.logged_out(frame):
+                if vision.logged_out(frame=vision.capture_frame()):
                     logger.warning("Logged out. Re-logging...")
                     game.login()
                     continue
 
-                frame_contains_valium_msg = vision.frame_contains_valium_message(frame)
+                frame_contains_valium_msg = vision.frame_contains_valium_message(frame=vision.capture_frame())
                 if frame_contains_valium_msg:
-                    butelka_dywizji_filled = vision.detect_butelka_dywizji_filled_message(frame)
+                    butelka_dywizji_filled = vision.detect_butelka_dywizji_filled_message(frame=vision.capture_frame())
                     if butelka_dywizji_filled:
                         game.move_full_butelka_dywizji()
                         game.use_next_butelka_dywizji()
@@ -576,7 +582,7 @@ def run(stage, log_level):
                     sleep(5)
                     continue
 
-                item_dropped, item_dropped_conf, item_dropped_loc = vision.detect_runo_lesne_dropped(frame)
+                item_dropped, item_dropped_conf, item_dropped_loc = vision.detect_runo_lesne_dropped(frame=vision.capture_frame())
                 if item_dropped:
                     # so pick it up
                     game.stop_attack()
@@ -585,25 +591,29 @@ def run(stage, log_level):
                     item_dropped_global_loc = vision.get_global_pos(item_dropped_loc)
                     game.click_at(item_dropped_global_loc)
                     sleep(1)
-                    game.tap_key(UserBind.WIREK, press_time=1.3)
+                    # game.tap_key(UserBind.WIREK, press_time=1.3)
                     game.pickup_many(uses=5)
+                else:
+                    # steer randomly for 2 seconds (escape the ghost mobs that are attacking)
+                    game.press_key(GameBind.CIECIE_Z_SIODLA)
+                    game.steer_randomly(press_time=2)
+                    game.release_key(GameBind.CIECIE_Z_SIODLA)
 
-                next_stage_act_item_found, item_found_conf, item_found_loc = vision.detect_runo_lesne(frame)
+                next_stage_act_item_found, item_found_conf, item_found_loc = vision.detect_runo_lesne(frame=vision.capture_frame())
 
-                logger.debug(f"Stage {stage}  |  {stage_first_times=}")
-                logger.debug(f"Stage {stage}  |  {stage_enter_times=}")
+                logger.debug(f"Stage {STAGE_NAMES[stage]} ({stage})  |  {stage_first_times=}")
+                logger.debug(f"Stage {STAGE_NAMES[stage]} ({stage})  |  {stage_enter_times=}")
                 if stage_first_times[stage] and stage_enter_times[stage] == -1:
                     stage_first_times[stage] = False
                     stage_enter_times[stage] = perf_counter()
 
-                _before_next_frame(game, vision, frame, cap_t0)
-                logger.info(f"Stage {stage}  |  Runo Leśne not found. Retrying...")
+                logger.info(f"Stage {STAGE_NAMES[stage]} ({stage})  |  Runo Leśne not found. Retrying...")
 
             if stage4_timed_out:
                 continue
 
             next_stage_item_global_loc = vision.get_global_pos(item_found_loc)
-            logger.debug(f"Stage {stage}  | Next stage item found\t{item_found_conf=:.2f} {item_found_loc=}")
+            logger.debug(f"Stage {STAGE_NAMES[stage]} ({stage})  | Next stage item found\t{item_found_conf=:.2f} {item_found_loc=}")
 
             sleep(1)
             game.click_at(next_stage_item_global_loc, right=True)
@@ -611,14 +621,14 @@ def run(stage, log_level):
             game.unmount()
             game.hide_eq()
 
-            logger.success("Stage 4 completed.")
+            logger.success("Stage 'stage_item_drop' (4) completed.")
             stage = 5
             sleep(4)  # wait for the next stage to load
 
 
         stage5_task_msg = "Pokonajcie bossa."
         double_boss_event_task_msg = "Pojawił się następny boss!"
-        if stage == 5:
+        if STAGE_NAMES[stage] == "stage_boss":
             # - zabij kapitana
             #     - lure
             #     - atakuj w miejscu + obrót
@@ -637,7 +647,7 @@ def run(stage, log_level):
             while not stage5_boss_killed:
                 if stage_enter_times[stage] != -1 and perf_counter() - stage_enter_times[stage] > STAGE_TIMEOUT[stage]:
                     stage5_timed_out = True
-                    logger.warning(f"Stage {stage}  |  Timeout ({STAGE_TIMEOUT[stage]}s). Teleporting to NPC and starting over...")
+                    logger.warning(f"Stage {STAGE_NAMES[stage]} ({stage})  |  Timeout ({STAGE_TIMEOUT[stage]}s). Teleporting to NPC and starting over...")
                     game.teleport_to_polana()
                     sleep(3)  # wait out relogging blockage
                     game.change_to_channel(next(channel_gen))  # change channel to reset dungeon map; handles the infinite relogging loop
@@ -659,9 +669,9 @@ def run(stage, log_level):
                     game.login()
                     continue
 
-                frame_contains_valium_msg = vision.frame_contains_valium_message(frame)
+                frame_contains_valium_msg = vision.frame_contains_valium_message(frame=vision.capture_frame())
                 if frame_contains_valium_msg:
-                    butelka_dywizji_filled = vision.detect_butelka_dywizji_filled_message(frame)
+                    butelka_dywizji_filled = vision.detect_butelka_dywizji_filled_message(frame=vision.capture_frame())
                     if butelka_dywizji_filled:
                         game.move_full_butelka_dywizji()
                         game.use_next_butelka_dywizji()
@@ -671,25 +681,26 @@ def run(stage, log_level):
                 
                 game.lure()
                 game.turn_randomly()
-                dung_message = VisionDetector.get_dungeon_message(frame)
-                logger.debug(f"Stage {stage}  | {dung_message=}")
+                dung_message = VisionDetector.get_dungeon_message(frame=vision.capture_frame())
+                logger.debug(f"Stage {STAGE_NAMES[stage]} ({stage})  | {dung_message=}")
                 msg_similarity = nlp(dung_message).similarity(nlp(stage5_task_msg))
                 msg_double_boss_event_similarity = nlp(dung_message).similarity(nlp(double_boss_event_task_msg))
                 not_task_msg = NONSENSE_MSG_SIMILARITY_THRESHOLD < msg_similarity < 0.6
                 double_boss_event_msg = msg_double_boss_event_similarity > 0.6
-                logger.debug(f"Stage {stage}  |  {dung_message=} {msg_similarity=:.3f} {msg_double_boss_event_similarity=:.3f}")
+                logger.debug(f"Stage {STAGE_NAMES[stage]} ({stage})  |  {dung_message=} {msg_similarity=:.3f} {msg_double_boss_event_similarity=:.3f}")
+                logger.debug(f"Stage {STAGE_NAMES[stage]} ({stage})  |  {not_task_msg=} {double_boss_event_msg=}")
                 if not_task_msg and not double_boss_event_msg:
                     stage5_boss_killed = True
                     break
 
                 if double_boss_event_msg and perf_counter() - stage5_t0 > STAGE_TIMEOUT[stage]:
-                    logger.warning(f"Stage {stage}  |  Timeout ({STAGE_5_TIMEOUT}s). Re-entering in {REENTER_WAIT}s...")
+                    logger.warning(f"Stage {STAGE_NAMES[stage]} ({stage})  |  Timeout ({STAGE_5_TIMEOUT}s). Re-entering in {REENTER_WAIT}s...")
                     game.pickup_many(uses=5)
                     stage5_took_too_long = True
                     break
 
-                logger.debug(f"Stage {stage}  |  {stage_first_times=}")
-                logger.debug(f"Stage {stage}  |  {stage_enter_times=}")
+                logger.debug(f"Stage {STAGE_NAMES[stage]} ({stage})  |  {stage_first_times=}")
+                logger.debug(f"Stage {STAGE_NAMES[stage]} ({stage})  |  {stage_enter_times=}")
                 if stage_first_times[stage] and stage_enter_times[stage] == -1:
                     stage_first_times[stage] = False
                     stage_enter_times[stage] = perf_counter()
@@ -704,6 +715,12 @@ def run(stage, log_level):
             # because of last stage completed
             if not stage5_took_too_long:
                 logger.success(f"Boss has been killed! Dungeon completed. Re-entering in {REENTER_WAIT}s...")
+                seq_times_str = "\n".join([
+                    f"({i}) {stage_name:>20}: {timedelta(seconds=perf_counter() - stage_enter_times[i])}s"
+                    for i, stage_name in enumerate(STAGE_NAMES)
+                ])
+                logger.success()
+                logger.success(seq_times_str)
 
             game.calibrate_camera()
             game.tap_key(GameBind.MOVE_RIGHT, press_time=0.3)
@@ -713,13 +730,13 @@ def run(stage, log_level):
             # reset the parameters
             stage = 0
             stage_enter_times = [-1] * 6
-            stage_first_times[1:] = [True] * 5  # keep stage0 as False for continuous re-entering
+            # stage_first_times[1:] = [True] * 5  # keep stage0 as False for continuous re-entering
+            stage_first_times = [True] * 6
             destroyed_metins = 0
             metin_detected = False
             stage3_first_frame = True
+            continue
 
-        # every tick
-        _before_next_frame(game, vision, frame_wth_yolo_dets, cap_t0)
 
     if game.is_running:
         game.exit()

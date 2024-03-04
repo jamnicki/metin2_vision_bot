@@ -1,6 +1,6 @@
 import os
 import re
-from random import choices, uniform
+from random import choice, choices, uniform
 from time import perf_counter, sleep
 from typing import Optional, Tuple
 
@@ -19,6 +19,8 @@ from pynput.mouse import Button
 from pynput.mouse import Controller as MouseController
 from pynput.mouse import Listener as MouseListener
 
+import positions
+from utils import Success
 from settings import (
     GAME_VIEW_POLY_OFF_BTN_POS,
     WINDOW_HEIGHT,
@@ -29,7 +31,6 @@ from settings import (
     UserBind,
 )
 from vision_detector import VisionDetector
-import positions
 
 
 def scale_img(img, scale=5):
@@ -62,8 +63,6 @@ class GameController:
         self.vision_detector = vision_detector
         self.start_delay = start_delay
 
-        self._start_delay(self.start_delay)
-        
         self.saved_credentials_idx = saved_credentials_idx
         # self.game_exe_path = r"D:\Gry\ValiumAkademia\valium.exe"  # local
         self.game_exe_path = r"C:\ValiumAkademia\valium.exe"  # vbox
@@ -79,28 +78,45 @@ class GameController:
         self.is_running = True
         self.last_turn = None
         self.attacking = False
-        self.mounted = False  # TODO: implement mounted detection
-        self.items_in_range = True  # TODO: implement items detection
+        self.mounted = False
         self.is_polymorphed = False
 
         self.eq_visible = False
         self.minimap_visible = True
         self.map_visible = False
+        self.settings_visible = False
+
+        self._start_delay(self.start_delay)
+        self._activate_window()
 
     def press_key(self, key):
         self._check_key_value(key)
         self.keyboard.press(key.value)
         logger.trace(f"Key `{key}` pressed")
 
-    def _reset_controller_attributes(self):
+    def reset_game_state(self):
+        logger.info("Resetting the game state...")
+        self.reset_game_visibility_state()
         self.is_running = True
         self.last_turn = None
         self.attacking = False
         self.mounted = False
-        self.items_in_range = True
         self.is_polymorphed = False
+
+    def reset_game_visibility_state(self):
+        logger.info("Resetting the game visibility state...")
         self.eq_visible = False
-        self.minimap_visible = False
+        self.minimap_visible = True
+        self.map_visible = False
+        self.settings_visible = False
+
+    def _activate_window(self):
+        # dummy function to activate the window by clicking on it in safe area
+        # window must be visible and not minimized
+        safe_point = positions.EXP_CIRCLES_ROI_CENTER
+        safe_point_global = self.vision_detector.get_global_pos(safe_point)
+        self.click_at(safe_point_global)
+        sleep(1)
 
     def tap_key(self, key, press_time: Optional[float] = None):
         # add extra delay for proper recognition of the key press by game
@@ -141,7 +157,7 @@ class GameController:
 
     def click_at(self, pos: Tuple[int, int], right=False, times: int = 1):
         self.move_cursor_at(pos)
-        sleep(0.3)
+        sleep(0.5)
         self.click(right=right, times=times)
 
     def get_user_position(self, vis_detector: VisionDetector, frame: np.array, indicator_pos) -> Tuple[np.array, Tuple[int, int]]:
@@ -183,9 +199,8 @@ class GameController:
 
     def change_to_channel(self, channel: int, wait_after_change: float = 2):
         logger.info(f"Switching to CH{channel}...")
-        with self.keyboard.pressed(Key.ctrl_l):
-            self.tap_key(getattr(Key, f"f{channel}"))
-        self._key_release_wait()  # to prevent pressing other keys too fast
+        ch_ctrl_bind = getattr(Key, f"f{channel}")
+        self.press_with(ch_ctrl_bind, Key.ctrl_l)
         sleep(wait_after_change)
 
     def lure(self):
@@ -193,21 +208,20 @@ class GameController:
         self.tap_key(UserBind.PELERYNKA)
 
     def lure_many(self, uses: int = 2):
-        _uses = choices([uses, uses + 1, uses + 2], weights=[0.6, 0.3, 0.1])[0]
+        _uses = choices([uses, uses + 1], weights=[0.7, 0.3])[0]
         for _ in range(_uses):
             self.lure()
             sleep(uniform(0.01, 0.02))
 
     def pickup(self):
-        if self.items_in_range:
-            logger.info("Picking up...")
-            self.tap_key(GameBind.PICKUP, press_time=uniform(1.3, 1.8))
+        logger.info("Picking up...")
+        self.tap_key(GameBind.PICKUP, press_time=uniform(1.3, 1.8))
 
-    def pickup_many(self, uses: int = 1):
-        _uses = choices([uses, uses + 1, uses + 2], weights=[0.6, 0.3, 0.1])[0]
-        for _ in range(uses):
+    def pickup_many(self, uses: int = 2):
+        _uses = choices([uses, uses + 1], weights=[0.7, 0.3])[0]
+        for _ in range(_uses):
             self.pickup()
-            sleep(uniform(0.01, 0.02))
+            sleep(uniform(0.1, 0.2))
 
     def pickup_on(self):
         self.press_key(GameBind.PICKUP)
@@ -217,21 +231,21 @@ class GameController:
 
     @staticmethod
     def _release_key_delay():
-        return uniform(0.15, 0.2)
+        return uniform(0.2, 0.25)
 
     def _key_release_wait(self):
         sleep(self._release_key_delay())
 
     @staticmethod
     def _release_mouse_btn_delay():
-        return uniform(0.15, 0.2)
+        return uniform(0.1, 0.15)
 
     def _mouse_btn_release_wait(self):
         sleep(self._release_mouse_btn_delay())
     
     @staticmethod
     def _after_mouse_move_delay():
-        return uniform(0.15, 0.2)
+        return uniform(0.2, 0.25)
 
     def _after_mouse_move_wait(self):
         sleep(self._after_mouse_move_delay())
@@ -244,15 +258,18 @@ class GameController:
 
     def toggle_mount(self):
         logger.info("Toggling mount...")
-        with self.keyboard.pressed(Key.ctrl_l):
-            self.tap_key(GameBind.CTRL_MOUNT_KEY)
+        self.press_with(GameBind.CTRL_MOUNT_KEY, Key.ctrl_l)
+        self.mounted = not self.mounted
+
+    def press_with(self, key, with_, press_time: Optional[float] = None):
+        with self.keyboard.pressed(with_):
+            sleep(0.5)  # wait to register the ctrl press
+            self.tap_key(key, press_time=press_time)
         self._key_release_wait()  # to prevent pressing other keys too fast
 
     def toggle_minimap(self):
         logger.info("Toggling minimap visibility...")
-        with self.keyboard.pressed(Key.shift_l):
-            self.tap_key(GameBind.SHIFT_MINIMAP)
-        self._key_release_wait()  # to prevent pressing other keys too fast
+        self.press_with(GameBind.SHIFT_MINIMAP, Key.shift_l)
         self.minimap_visible = not self.minimap_visible
     
     def hide_minimap(self):
@@ -263,18 +280,9 @@ class GameController:
         if not self.minimap_visible:
             self.toggle_minimap()
 
-    def turn_randomly(self, turn_press_time: float = 0.4, weights: Optional[Tuple[float, float, float, float]] = None):
-        if weights is None:
-            weights = [0.4, 0.4, 0.1, 0.1]
-        possible_turns = [Key.up, Key.down, Key.left, Key.right]
-        turn = choices(possible_turns, weights=weights)[0]
-        if self.last_turn is None:
-            self.tap_key(turn, press_time=turn_press_time)
-
-        logger.info("Turning randomly...")
-        turn = choices(possible_turns, weights=weights)[0]
-        while turn == -1:
-            turn = choices(possible_turns, weights=weights)[0]
+    def turn_randomly(self, turn_press_time: float = 0.6):
+        possible_turns = list(set([Key.up, Key.down, Key.left, Key.right]) - {self.last_turn})
+        turn = choice(possible_turns)
         self.tap_key(turn, press_time=turn_press_time)
         self.last_turn = turn
 
@@ -351,33 +359,48 @@ class GameController:
     def mount(self):
         if not self.mounted:
             self.toggle_mount()
-            self.mounted = True
 
     def unmount(self):
         if self.mounted:
             self.toggle_mount()
-            self.mounted = False
 
     def use_polymorph(self):
         self.tap_key(UserBind.MARMUREK, press_time=1)
         sleep(0.5)
+        self.is_polymorphed = True
 
     def polymorph_off(self):
-        # if self.is_polymorphed:
-        #     with self.keyboard.pressed(Key.ctrl_l):
-        #         self.tap_key(GameBind.CTRL_POLYMORPH_OFF, press_time=0.3)
-        #         self._key_release_wait()
-        #     self._key_release_wait()
-        #     self.is_polymorphed = False
-        global_polymorph_off_btn_pos = self.vision_detector.get_global_pos(GAME_VIEW_POLY_OFF_BTN_POS)
-        self.show_eq()
-        sleep(0.1)
-        self.click_at(global_polymorph_off_btn_pos)  # idk ctrl+p nie dziaua
-        sleep(0.1)
-        self.hide_eq()
+        self.press_with(GameBind.CTRL_POLYMORPH_OFF, Key.ctrl_l, press_time=0.3)
+        self.is_polymorphed = False
 
     def calibrate_camera(self):
         self._reset_camera()
+
+    def calibrate_game_settings(self):
+        self.show_settings()
+        
+        self.click_at(self.vision_detector.get_global_pos(positions.GAME_SYS_SETTINGS_BTN_CENTER))
+        self.click_at(self.vision_detector.get_global_pos(positions.GSS_CAM_CLOSER_BTN_CENTER))
+        self.click_at(self.vision_detector.get_global_pos(positions.GSS_FOG_LIGHT_BTN_CENTER))
+
+        self.hide_settings()
+        self.show_settings()
+
+        self.click_at(self.vision_detector.get_global_pos(positions.GAME_GAME_SETTINGS_BTN_CENTER))
+        self.click_at(self.vision_detector.get_global_pos(positions.GGS_HIDE_CHAT_BTN_CENTER))
+        self.click_at(self.vision_detector.get_global_pos(positions.GGS_NAME_ITEMS_ONLY_BTN_CENTER))
+
+    def toggle_settings(self):
+        self.tap_key(GameBind.SETTINGS)
+        self.settings_visible = not self.settings_visible
+
+    def show_settings(self):
+        if not self.settings_visible:
+            self.toggle_settings()
+
+    def hide_settings(self):
+        if self.settings_visible:
+            self.toggle_settings()
 
     def _reset_camera(self):
         self.tap_key(GameBind.CAMERA_UP, press_time=1.5)
@@ -397,6 +420,38 @@ class GameController:
 
     def zoomout_camera(self, press_time: float):
         self.tap_key(GameBind.CAMERA_ZOOM_OUT, press_time=press_time)
+
+    def steer_randomly(self, press_time: float = 2):
+        steer_action = choice([self.steer_up_right, self.steer_up_left, self.steer_down_right, self.steer_down_left])
+        steer_action(press_time=press_time)
+
+    def steer_up_right(self, press_time: float = 2):
+        self.press_key(GameBind.MOVE_FORWARD)
+        self.press_key(GameBind.MOVE_RIGHT)
+        sleep(press_time)
+        self.release_key(GameBind.MOVE_FORWARD)
+        self.release_key(GameBind.MOVE_RIGHT)
+
+    def steer_up_left(self, press_time: float = 2):
+        self.press_key(GameBind.MOVE_FORWARD)
+        self.press_key(GameBind.MOVE_LEFT)
+        sleep(press_time)
+        self.release_key(GameBind.MOVE_FORWARD)
+        self.release_key(GameBind.MOVE_LEFT)
+
+    def steer_down_right(self, press_time: float = 2):
+        self.press_key(GameBind.MOVE_BACKWARD)
+        self.press_key(GameBind.MOVE_RIGHT)
+        sleep(press_time)
+        self.release_key(GameBind.MOVE_BACKWARD)
+        self.release_key(GameBind.MOVE_RIGHT)
+
+    def steer_down_left(self, press_time: float = 2):
+        self.press_key(GameBind.MOVE_BACKWARD)
+        self.press_key(GameBind.MOVE_LEFT)
+        sleep(press_time)
+        self.release_key(GameBind.MOVE_BACKWARD)
+        self.release_key(GameBind.MOVE_LEFT)
 
     def show_eq(self):
         if not self.eq_visible:
@@ -452,21 +507,22 @@ class GameController:
 
     def grab_item(self, item_pos: Tuple[int, int]):
         self.click_at(item_pos)
-        sleep(0.3)
+        sleep(0.4)
 
     def put_item(self, slot_pos: Tuple[int, int]):
         self.click_at(slot_pos)
-        sleep(0.3)
+        sleep(0.4)
 
     def login(self):
         # login_btn_center = (400, 300)
         login_btn_global_center = self.vision_detector.get_global_pos(positions.LOGIN_BTN_CENTER)
         self.load_saved_credentials(idx=self.saved_credentials_idx)
         self.click_at(login_btn_global_center)
-        sleep(5)  # wait for character select menu to load
+        sleep(10)  # wait for character select menu to load
         self.tap_key(Key.enter)  # confirm character selection (first)
-        sleep(5)  # wait for the game to load
+        sleep(10)  # wait for the game to load
         logger.info("Logged in successfully!")
+        self.reset_game_visibility_state()
 
     def load_saved_credentials(self, idx: int):
         # first_load_credentials_btn_center: (440, 360)
@@ -487,7 +543,6 @@ class GameController:
 
     def restart_game(self):
         self.open_game()
-        # self._reset_controller_attributes()
 
     def toggle_map(self):
         logger.info("Toggling map visibility...")
@@ -507,7 +562,29 @@ class GameController:
         self.show_map()
         map_polana_btn_global_center = self.vision_detector.get_global_pos(positions.MAP_POLANA_BTN_CENTER)
         self.click_at(map_polana_btn_global_center)
-        sleep(6)  # wait for the teleportation to finish
+        sleep(10)  # wait for the teleportation to finish
         # update the map visibility state, but there is no need to actually hide the map,
         # because the its hidden after the teleportation
         self.map_visible = False
+
+    def idle(self, time: float, use_boosters: bool = True, turn_randomly: bool = False, pickup: bool = False, lure: bool = False, act_seq_wait: Optional[float] = None) -> Success:
+        t0 = perf_counter()
+        logger.info(f"Idling for {time}s...")
+        while perf_counter() - t0 <= time:
+            seq_t0 = perf_counter()
+            if use_boosters:
+                self.use_boosters()
+            if turn_randomly:
+                self.turn_randomly()
+            if pickup:
+                self.pickup()
+            if lure:
+                self.lure()
+            if act_seq_wait is None:
+                act_seq_wait = self._idle_act_seq_wait()
+            sleep_time = max(act_seq_wait, perf_counter() - seq_t0 + act_seq_wait)
+            sleep(sleep_time)
+        logger.debug(f"Idling finished")
+
+    def _idle_act_seq_wait(self):
+        return uniform(0.05, 0.15)
