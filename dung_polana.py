@@ -557,7 +557,7 @@ def run(stage, log_level):
                 game.use_boosters()
                 game.start_attack()
                 game.lure_many()
-                game.idle(time=5, lure=True, pickup=True, turn_randomly=True)
+                game.idle(time=12, lure=True, pickup=True, turn_randomly=True)
                 game.move_camera_left(press_time=0.7)
                 game.stop_attack()
                 game.pickup_many()
