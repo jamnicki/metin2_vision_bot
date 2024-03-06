@@ -39,24 +39,24 @@ from utils import channel_generator
 def main(stage, log_level):
     log_level = log_level.upper()
     setup_logger(script_name=Path(__file__).name, level=log_level)
-    q = input(
-        "\nPlease ensure that:"
-        "\n\t- the game is running in 800x600 resolution,"
-        "\n\t- the game is in windowed mode,"
-        "\n\t- the game is in the foreground,"
-        "\n\t- camera view is set to 'closer' (Options > System Settings > Camera -> Further),"
-        "\n\t- fog is turned off (Options > System Settings > Fog -> Light),"
-        "\n\t- the character stands in front of the dungeon NPC (otherwise you will wait for timeout),"
-        "\n\t- the character is not polymorphed,"
-        "\n\t- the character is standing,"
-        "\n\t- minimap is visible,"
-        "\n\t- equipment window is closed,"
-        "\n\t- chat messages are turned off"
-        "\n\nPress [Enter] to continue or [q] to terminate...\n > "
-    )
-    if "q" in q.lower():
-        logger.warning("Terminated by user.")
-        exit()
+    # q = input(
+    #     "\nPlease ensure that:"
+    #     "\n\t- the game is running in 800x600 resolution,"
+    #     "\n\t- the game is in windowed mode,"
+    #     "\n\t- the game is in the foreground,"
+    #     "\n\t- camera view is set to 'closer' (Options > System Settings > Camera -> Further),"
+    #     "\n\t- fog is turned off (Options > System Settings > Fog -> Light),"
+    #     "\n\t- the character stands in front of the dungeon NPC (otherwise you will wait for timeout),"
+    #     "\n\t- the character is not polymorphed,"
+    #     "\n\t- the character is standing,"
+    #     "\n\t- minimap is visible,"
+    #     "\n\t- equipment window is closed,"
+    #     "\n\t- chat messages are turned off"
+    #     "\n\nPress [Enter] to continue or [q] to terminate...\n > "
+    # )
+    # if "q" in q.lower():
+    #     logger.warning("Terminated by user.")
+    #     exit()
     logger.warning("Starting the bot...")
     run(stage, log_level)
 
@@ -83,13 +83,13 @@ def run(stage, log_level):
     STAGE_TIMEOUT = [
         90,       # before_enter
         60 * 3,   # stage_200_mobs
-        60 * 3,   # stage_minibosses
-        60 * 7,   # stage_metins
+        60 * 5,   # stage_minibosses
+        60 * 8,   # stage_metins
         60 * 5,   # stage_item_drop
         60 * 5,   # stage_boss
     ]
     WALK_TIME_TO_METIN = 10
-    METIN_DESTROY_TIME = 30
+    METIN_DESTROY_TIME = 25
 
     stage1_task_msg = "Pokonajcie 200 potworów."
     stage2_task_msg = "Pokonajcie wszystkie bossy."
@@ -251,8 +251,8 @@ def run(stage, log_level):
         if STAGE_NAMES[stage] == "stage_200_mobs":
             if stage_first_times[stage]:
                 game.polymorph_off()
-                game.calibrate_camera()
                 game.mount()
+                game.calibrate_camera()
 
             stage1_all_mobs_killed = False
             stage1_timed_out = False
@@ -275,9 +275,10 @@ def run(stage, log_level):
                 game.use_boosters()
                 game.start_attack()
                 game.lure_many()
-                game.idle(time=20, lure=True, pickup=True, turn_randomly=True)
+                game.idle(time=7, lure=True, pickup=True, turn_randomly=True)
                 game.move_camera_left(press_time=0.7)
                 game.stop_attack()
+                game.pickup()
 
                 # steer randomly for 2 seconds (escape the ghost mobs that are attacking)
                 game.press_key(GameBind.CIECIE_Z_SIODLA)
@@ -347,6 +348,7 @@ def run(stage, log_level):
             #     aż do wykrycia następneg komunikatu
 
             if stage_first_times[stage]:
+                game.unmount()
                 game.use_polymorph()
 
             stage2_all_minibosses_killed = False
@@ -461,10 +463,10 @@ def run(stage, log_level):
                 obstacle_avoided = False
                 stage_first_times[stage] = False
                 stage_enter_times[stage] = perf_counter()
+                game.unmount()
                 game.calibrate_camera()
-                # game.zoomin_camera(press_time=0.1)
+                game.zoomin_camera(press_time=0.1)
                 game.move_camera_down(press_time=0.8)
-                sleep(1)  # wait for the camera to stabilize before capturing the frame
 
             logger.debug(f"Stage {STAGE_NAMES[stage]} ({stage})  |  {stage_first_times=}")
             logger.debug(f"Stage {STAGE_NAMES[stage]} ({stage})  |  {stage_enter_times=}")
@@ -477,10 +479,7 @@ def run(stage, log_level):
             )[0]
             any_yolo_results = len(yolo_results.boxes.cls) > 0
             if not any_yolo_results:
-                if destroyed_metins == 0:
-                    game.move_camera_right(press_time=0.20)
-                else:
-                    game.move_camera_left(press_time=0.3)
+                game.move_camera_right(press_time=0.2)
                 logger.warning(f"Stage {STAGE_NAMES[stage]} ({stage})  |  Metin not found. Looking around, retrying...")
                 continue
 
@@ -495,7 +494,7 @@ def run(stage, log_level):
             metin_detected = metins_idxs[0].shape[0] > 0
             logger.debug(f"Stage {STAGE_NAMES[stage]} ({stage})  |  {metins_idxs=} {metin_detected=}")
             if not metin_detected:
-                game.move_camera_left(press_time=0.3)
+                game.move_camera_left(press_time=0.4)
                 logger.warning(f"Stage {STAGE_NAMES[stage]} ({stage})  |  Metin not found. Looking around, retrying...")
                 continue
 
@@ -530,8 +529,9 @@ def run(stage, log_level):
             #     - pickup
             #     - czy Runo Leśne pojawiło się w eq? TAK: kliknij na nie ppm NIE: atakuj dalej 
 
-            game.calibrate_camera()
+            game.polymorph_off()
             game.mount()
+            game.calibrate_camera()
 
             looking_for_item_t0 = perf_counter()
             next_stage_act_item_found = False
@@ -557,7 +557,7 @@ def run(stage, log_level):
                 game.use_boosters()
                 game.start_attack()
                 game.lure_many()
-                game.idle(time=10, lure=True, pickup=True, turn_randomly=True)
+                game.idle(time=5, lure=True, pickup=True, turn_randomly=True)
                 game.move_camera_left(press_time=0.7)
                 game.stop_attack()
                 game.pickup_many()
@@ -586,12 +586,10 @@ def run(stage, log_level):
                 if item_dropped:
                     # so pick it up
                     game.stop_attack()
-                    game.unmount()
-                    sleep(1)
                     item_dropped_global_loc = vision.get_global_pos(item_dropped_loc)
+                    game.press_key(GameBind.CIECIE_Z_SIODLA)
                     game.click_at(item_dropped_global_loc)
-                    sleep(1)
-                    # game.tap_key(UserBind.WIREK, press_time=1.3)
+                    game.release_key(GameBind.CIECIE_Z_SIODLA)
                     game.pickup_many(uses=5)
                 else:
                     # steer randomly for 2 seconds (escape the ghost mobs that are attacking)
@@ -713,14 +711,13 @@ def run(stage, log_level):
             game.polymorph_off()
 
             # because of last stage completed
+            stage_completion_times = [perf_counter() - t for t in stage_enter_times]
             if not stage5_took_too_long:
                 logger.success(f"Boss has been killed! Dungeon completed. Re-entering in {REENTER_WAIT}s...")
-                seq_times_str = "\n".join([
-                    f"({i}) {stage_name:>20}: {timedelta(seconds=perf_counter() - stage_enter_times[i])}s"
-                    for i, stage_name in enumerate(STAGE_NAMES)
-                ])
-                logger.success()
-                logger.success(seq_times_str)
+                for i, stage_name in enumerate(STAGE_NAMES):
+                    logger.success(f"({i}) {stage_name:>20}: {timedelta(seconds=stage_completion_times[i])}")
+                logger.success("")
+                logger.success(f"Total: {timedelta(seconds=sum(stage_completion_times))}")
 
             game.calibrate_camera()
             game.tap_key(GameBind.MOVE_RIGHT, press_time=0.3)

@@ -29,14 +29,15 @@ from utils import channel_generator
               type=click.Choice(["TRACE", "DEBUG", "INFO"], case_sensitive=False),
               help="Set the logging level."
 )
-def main(event, log_level):
+@click.option("--start", default=1, show_default=True, type=click.IntRange(1, 8), help="Start channel.")
+def main(event, log_level, start):
     log_level = log_level.upper()
     yolo_checks()
     setup_logger(script_name=Path(__file__).name, level=log_level)
-    run(event, log_level)
+    run(event, log_level, start)
 
 
-def run(event, log_level):
+def run(event, log_level, start):
     yolo = YOLO(MODELS_DIR / "valium_idle_metiny_yolov8s.pt")
     yolo_verbose = log_level in ["TRACE", "DEBUG"]
     logger.info("YOLO model loaded.")
@@ -47,18 +48,20 @@ def run(event, log_level):
     game = GameController(vision_detector=vision, start_delay=2)
     logger.info("Game controller loaded.")
 
-    channel_gen = channel_generator(1, 8)
+    channel_gen = channel_generator(1, 8, start=start)
 
-    YOLO_CONFIDENCE_THRESHOLD = 0.8
+    YOLO_CONFIDENCE_THRESHOLD = 0.75
     CHANNEL_TIMEOUT = 20
-    LOOKING_AROUND_MOVE_CAMERA_PRESS_TIME = 0.4
-    WALK_TO_METIN_TIME = 1.5
+    LOOKING_AROUND_MOVE_CAMERA_PRESS_TIME = 0.5
+    WALK_TO_METIN_TIME = 1.25
 
     # METIN_CLS = 0  # smierci sohan
     # METIN_DESTROY_TIME = 8  # smierci sohan | poly + masne eq + IS
 
     METIN_CLS = 1  # upadku polana
-    METIN_DESTROY_TIME = 3  # upadku polana | poly + masne eq + IS
+    METIN_DESTROY_TIME = 1.75  # upadku polana | poly + masne eq + IS
+
+    assert isinstance(METIN_CLS, int), "METIN_CLS must be an integer."
 
     game.calibrate_camera()
     game.move_camera_down(press_time=0.7)
@@ -114,7 +117,7 @@ def run(event, log_level):
             any_yolo_results = len(yolo_results.boxes.cls) > 0
             metins_idxs = torch_where(yolo_results.boxes.cls == METIN_CLS)
             metin_detected = metins_idxs[0].shape[0] > 0
-            logger.error(f"{metins_idxs=} {metin_detected=}")
+            logger.debug(f"{metins_idxs=} {metin_detected=}")
             if not metin_detected:
                 game.move_camera_right(press_time=LOOKING_AROUND_MOVE_CAMERA_PRESS_TIME)
                 logger.warning(f"Metin not found. Looking around, retrying...")
@@ -138,7 +141,8 @@ def run(event, log_level):
         game.idle(METIN_DESTROY_TIME, pickup=True)
         if event:
             game.idle(1, pickup=True)
-        game.pickup_many(uses=2)
+        game.pickup()
+        game.pickup()
         if event:
             game.pickup_many(uses=1)
         game.stop_attack()

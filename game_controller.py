@@ -64,8 +64,7 @@ class GameController:
         self.start_delay = start_delay
 
         self.saved_credentials_idx = saved_credentials_idx
-        # self.game_exe_path = r"D:\Gry\ValiumAkademia\valium.exe"  # local
-        self.game_exe_path = r"C:\ValiumAkademia\valium.exe"  # vbox
+        self.game_exe_path = r"C:\BOT\ValiumAkademia\valium.exe"  # vm
 
         self.keyboard = KeyboardController()
         self.keyboard_listener = self._init_keyboard_listener()
@@ -197,7 +196,7 @@ class GameController:
         else:
             sleep(after_move_wait)
 
-    def change_to_channel(self, channel: int, wait_after_change: float = 2):
+    def change_to_channel(self, channel: int, wait_after_change: float = 1):
         logger.info(f"Switching to CH{channel}...")
         ch_ctrl_bind = getattr(Key, f"f{channel}")
         self.press_with(ch_ctrl_bind, Key.ctrl_l)
@@ -476,18 +475,23 @@ class GameController:
         self.show_eq_slot(3)
         frame = self.vision_detector.capture_frame()
         bottles_locs = self.vision_detector.detect_butelki_dywizji(frame)
+        if len(bottles_locs) == 0:
+            logger.warning("No bottles found!. Cannot move the full butelka dywizji!")
+            return
         top_left_bottle_loc = bottles_locs[0]
         top_left_bottle_global_loc = self.vision_detector.get_global_pos(top_left_bottle_loc)
         self.grab_item(top_left_bottle_global_loc)
         self.show_eq_slot(4)
         empty_slots_locs = self.vision_detector.detect_empty_items_slots(frame)
         if len(empty_slots_locs) == 0:
+            logger.warning("No empty slots found!. Cannot move the full butelka dywizji!")
             self.click(right=True)  # cancel grabbing
             self.hide_eq()
             return
 
-        empty_slot_loc = empty_slots_locs[0]  # 
+        empty_slot_loc = empty_slots_locs[0]
         empty_slot_global_loc = self.vision_detector.get_global_pos(empty_slot_loc)
+        logger.info(f"Moving the full butelka dywizji to the empty slot (location on the screen: {empty_slot_global_loc})...")
         self.put_item(empty_slot_global_loc)
         self.hide_eq()
 
@@ -496,8 +500,12 @@ class GameController:
         self.show_eq_slot(3)
         frame = self.vision_detector.capture_frame()
         bottles_locs = self.vision_detector.detect_butelki_dywizji(frame)
+        if len(bottles_locs) == 0:
+            logger.warning("No empty bottles found!")
+            return
         top_left_bottle_loc = bottles_locs[0]
         top_left_bottle_global_loc = self.vision_detector.get_global_pos(top_left_bottle_loc)
+        logger.info(f"Using the next butelka dywizji (location on the screen: {top_left_bottle_global_loc})...")
         self.click_at(top_left_bottle_global_loc, right=True)  # start filling the next bottle
         # confirmation_btn_center = (360, 320)
         confirmation_btn_center_global = self.vision_detector.get_global_pos(positions.UZYJ_BUTELKE_CONFIRMATION_BTN)
@@ -505,12 +513,12 @@ class GameController:
         self.hide_eq()
 
     def grab_item(self, item_pos: Tuple[int, int]):
-        logger.info(f"Grabbing the item (location on the screen: {item_pos})...")
+        logger.debug(f"Grabbing the item (location on the screen: {item_pos})...")
         self.click_at(item_pos)
         sleep(0.4)
 
     def put_item(self, slot_pos: Tuple[int, int]):
-        logger.info(f"Putting the item to the slot (location on the screen: {slot_pos})...")
+        logger.debug(f"Putting the item to the slot (location on the screen: {slot_pos})...")
         self.click_at(slot_pos)
         sleep(0.4)
 
@@ -545,7 +553,7 @@ class GameController:
         sleep(load_wait)  # wait for the game to load
 
     def restart_game(self):
-        logging.info("Restarting the game...")
+        logger.info("Restarting the game...")
         self.open_game()
 
     def toggle_map(self):
@@ -575,7 +583,13 @@ class GameController:
         # because the its hidden after the teleportation
         self.map_visible = False
 
-    def idle(self, time: float, use_boosters: bool = True, turn_randomly: bool = False, pickup: bool = False, lure: bool = False, act_seq_wait: Optional[float] = None) -> Success:
+    def idle(self, time: float,
+             use_boosters: bool = True,
+             turn_randomly: bool = False,
+             pickup: bool = False,
+             lure: bool = False,
+             act_seq_wait: Optional[float] = None
+    ) -> Success:
         t0 = perf_counter()
         logger.info(f"Idling for {time}s...")
         while perf_counter() - t0 <= time:
@@ -593,6 +607,7 @@ class GameController:
             sleep_time = max(act_seq_wait, perf_counter() - seq_t0 + act_seq_wait)
             sleep(sleep_time)
         logger.debug(f"Idling finished")
+        return True
 
     def _idle_act_seq_wait(self):
         return uniform(0.05, 0.15)

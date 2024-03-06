@@ -4,7 +4,7 @@ import time
 from loguru import logger
 from itertools import cycle
 from pathlib import Path
-from typing import NewType
+from typing import NewType, Optional
 
 Success = NewType("Success", bool)
 
@@ -19,7 +19,12 @@ def setup_logger(script_name: str, level: str):
     logger.add(log_filepath, level=level)
 
 
-def channel_generator(min_=1, max_=8):
-    channels_cycle = cycle(list(range(min_, max_ + 1)))
+def channel_generator(min_: int = 1, max_: int = 8, start: Optional[int] = None):
+    channels = list(range(min_, max_ + 1))
+    if start is not None:
+        assert 1 <= start <= 8, f"Start channel must be between 1 and 8, '{start}' given."
+        for ch in channels[start - 1:]:
+            yield ch
+    channels_cycle = cycle(channels)
     while True:
         yield next(channels_cycle)

@@ -403,19 +403,10 @@ class VisionDetector:
     def fill_non_clickable_wth_black(frame: np.ndarray) -> np.array:
         fill_color = (0, 0, 0)
         thickness = -1
-
         # # 800 x 600
-        # frame = cv2.rectangle(frame, (0, 0), (260, 90), fill_color, thickness)  # mask effects roi
-        # frame = cv2.rectangle(frame, (0, 170), (120, 350), fill_color, thickness)  # mask quests roi
-        # frame = cv2.rectangle(frame, (0, 600), (800, 530), fill_color, thickness)  # mask low bar
-        # frame = cv2.rectangle(frame, (640, 600), (800, 0), fill_color, thickness)  # mask minimap; right bar
-        # frame = cv2.rectangle(frame, (100, 530), (700, 500), fill_color, thickness)  # mask rest of the chat
-
-        # 800 x 530 (y * 0.83 to local)
-        frame = cv2.rectangle(frame, (0, 0), (260, 80), fill_color, thickness)  # mask effects roi
-        frame = cv2.rectangle(frame, (0, 150), (120, 309), fill_color, thickness)  # mask quests roi
-        frame = cv2.rectangle(frame, (0, 530), (800, 460), fill_color, thickness)  # mask low bar
-        frame = cv2.rectangle(frame, (640, 530), (800, 0), fill_color, thickness)  # mask minimap; right bar
-        frame = cv2.rectangle(frame, (100, 468), (700, 420), fill_color, thickness)  # mask rest of the chat
-
+        frame = cv2.rectangle(frame, (0, 0), (260, 90), fill_color, thickness)  # mask effects roi
+        frame = cv2.rectangle(frame, (0, 170), (120, 350), fill_color, thickness)  # mask quests roi
+        frame = cv2.rectangle(frame, (0, 600), (800, 530), fill_color, thickness)  # mask low bar
+        frame = cv2.rectangle(frame, (640, 600), (800, 0), fill_color, thickness)  # mask minimap; right bar
+        frame = cv2.rectangle(frame, (100, 530), (700, 500), fill_color, thickness)  # mask rest of the chat
         return frame
