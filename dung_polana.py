@@ -498,7 +498,7 @@ def run(stage, log_level):
                 logger.warning(f"Stage {STAGE_NAMES[stage]} ({stage})  |  Metin not found. Looking around, retrying...")
                 continue
 
-            metins_xywh = yolo_results.boxes.xywh[metins_idxs]
+            metins_xywh = yolo_results.boxes.xywh[metins_idxs].cpu()
             metins_distance_to_center = np.linalg.norm(metins_xywh[:, :2] - np.array(vision.center), axis=1)
             closest_metin_idx = metins_distance_to_center.argmin()
             closest_metin_bbox_xywh = yolo_results.boxes.xywh[closest_metin_idx]
