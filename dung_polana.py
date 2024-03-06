@@ -75,14 +75,14 @@ def run(stage, log_level):
 
     game.hide_minimap()
 
-    REENTER_WAIT = 4
+    REENTER_WAIT = 2
     YOLO_CONFIDENCE_THRESHOLD = 0.8
-    YOLO_METIN_CONFIDENCE_THRESHOLD = 0.85
+    YOLO_METIN_CONFIDENCE_THRESHOLD = 0.8
     NONSENSE_MSG_SIMILARITY_THRESHOLD = 0
     STAGE_NAMES = ["before_enter", "stage_200_mobs", "stage_minibosses", "stage_metins", "stage_item_drop", "stage_boss"]
     STAGE_TIMEOUT = [
-        90,       # before_enter
-        60 * 3,   # stage_200_mobs
+        60,       # before_enter
+        60 * 2,   # stage_200_mobs
         60 * 5,   # stage_minibosses
         60 * 8,   # stage_metins
         60 * 5,   # stage_item_drop
