@@ -88,8 +88,14 @@ def run(stage, log_level):
         60 * 5,   # stage_item_drop
         60 * 5,   # stage_boss
     ]
+
     WALK_TIME_TO_METIN = 10
     METIN_DESTROY_TIME = 25
+
+    LOADING_TIMEOUT = 10
+    STAGE_200_MOBS_IDLE_TIME = 14
+    STAGE_ITEM_DROP_IDLE_TIME = 14
+
 
     stage1_task_msg = "Pokonajcie 200 potworów."
     stage2_task_msg = "Pokonajcie wszystkie bossy."
@@ -121,9 +127,9 @@ def run(stage, log_level):
             continue
 
         if vision.is_loading(frame):
-            sleep(10)
+            sleep(LOADING_TIMEOUT)
             if vision.is_loading(frame=vision.capture_frame()):
-                logger.warning("Loading is taking too long (>10s), something is wrong. Escaping to logging menu...")
+                logger.warning(f"Loading is taking too long (>{LOADING_TIMEOUT}s), something is wrong. Escaping to logging menu...")
                 game.tap_key(Key.esc, press_time=2)
                 sleep(5)
                 continue
@@ -272,10 +278,10 @@ def run(stage, log_level):
                     break
 
                 # attack for 20 seconds while mounted
+                game.lure_many()
                 game.use_boosters()
                 game.start_attack()
-                game.lure_many()
-                game.idle(time=12, lure=True, pickup=True, turn_randomly=True)
+                game.idle(time=STAGE_200_MOBS_IDLE_TIME, lure=True, pickup=True, turn_randomly=True)
                 game.move_camera_left(press_time=0.7)
                 game.stop_attack()
                 game.pickup()
@@ -494,7 +500,7 @@ def run(stage, log_level):
             metin_detected = metins_idxs[0].shape[0] > 0
             logger.debug(f"Stage {STAGE_NAMES[stage]} ({stage})  |  {metins_idxs=} {metin_detected=}")
             if not metin_detected:
-                game.move_camera_left(press_time=0.4)
+                game.move_camera_left(press_time=0.3)
                 logger.warning(f"Stage {STAGE_NAMES[stage]} ({stage})  |  Metin not found. Looking around, retrying...")
                 continue
 
@@ -557,7 +563,7 @@ def run(stage, log_level):
                 game.use_boosters()
                 game.start_attack()
                 game.lure_many()
-                game.idle(time=12, lure=True, pickup=True, turn_randomly=True)
+                game.idle(time=STAGE_ITEM_DROP_IDLE_TIME, lure=True, pickup=True, turn_randomly=True)
                 game.move_camera_left(press_time=0.7)
                 game.stop_attack()
                 game.pickup_many()
