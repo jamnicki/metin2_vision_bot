@@ -64,7 +64,7 @@ def main(stage, log_level):
 def run(stage, log_level):
     yolo_checks()
     yolo_verbose = log_level in ["TRACE", "DEBUG"]
-    yolo = YOLO(MODELS_DIR / "valium_polana_yolov8s.pt", device="gpu")
+    yolo = YOLO(MODELS_DIR / "valium_polana_yolov8s.pt").to("cuda:0")
 
     nlp = pl_core_news_lg.load()
 
