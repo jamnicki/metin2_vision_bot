@@ -90,7 +90,7 @@ def run(stage, log_level):
     ]
 
     WALK_TIME_TO_METIN = 10
-    METIN_DESTROY_TIME = 25
+    METIN_DESTROY_TIME = 18
 
     LOADING_TIMEOUT = 10
     STAGE_200_MOBS_IDLE_TIME = 14
@@ -104,6 +104,7 @@ def run(stage, log_level):
     stage5_task_msg = "Pokonajcie bossa."
 
     stage_enter_times = [-1] * 6
+    stage_completion_times = [-1] * 6 
     stage_first_times = [True] * 6
     curr_fps = 0
     destroyed_metins = 0
@@ -196,6 +197,7 @@ def run(stage, log_level):
                 game.change_to_channel(next(channel_gen))  # change channel to reset dungeon map; handles the infinite relogging loop
                 stage = 0
                 stage_enter_times = [-1] * 6
+                stage_completion_times = [-1] * 6 
                 stage_first_times = [True] * 6
                 destroyed_metins = 0
                 metin_detected = False
@@ -271,6 +273,7 @@ def run(stage, log_level):
                     game.change_to_channel(next(channel_gen))  # change channel to reset dungeon map; handles the infinite relogging loop
                     stage = 0
                     stage_enter_times = [-1] * 6
+                    stage_completion_times = [-1] * 6 
                     stage_first_times = [True] * 6
                     destroyed_metins = 0
                     metin_detected = False
@@ -324,6 +327,7 @@ def run(stage, log_level):
                     stage = 2
                     logger.success(f"Stage 'stage_200_mobs' (1) completed.")
                     sleep(2)  # wait for the next stage to load
+                    stage_completion_times[stage] = perf_counter() - stage_enter_times[stage]
                     break
 
                 logger.debug(f"Stage {STAGE_NAMES[stage]} ({stage})  |  {stage_first_times=}")
@@ -368,6 +372,7 @@ def run(stage, log_level):
                     game.change_to_channel(next(channel_gen))  # change channel to reset dungeon map; handles the infinite relogging loop
                     stage = 0
                     stage_enter_times = [-1] * 6
+                    stage_completion_times = [-1] * 6 
                     stage_first_times = [True] * 6
                     destroyed_metins = 0
                     metin_detected = False
@@ -423,6 +428,7 @@ def run(stage, log_level):
             logger.success("Stage 'stage_minibosses' (2) completed.")
             stage = 3
             sleep(10)  # wait for the next stage to load
+            stage_completion_times[stage] = perf_counter() - stage_enter_times[stage]
             continue
 
 
@@ -450,6 +456,7 @@ def run(stage, log_level):
                 logger.success("Stage 'stage_metins' (3) completed.")
                 stage = 4
                 sleep(4)  # wait for the next stage to load
+                stage_completion_times[stage] = perf_counter() - stage_enter_times[stage]
                 continue
 
             if not stage_first_times[stage] and stage_enter_times[stage] != -1 and perf_counter() - stage_enter_times[stage] > STAGE_TIMEOUT[stage]:
@@ -459,6 +466,7 @@ def run(stage, log_level):
                 game.change_to_channel(next(channel_gen))  # change channel to reset dungeon map; handles the infinite relogging loop
                 stage = 0
                 stage_enter_times = [-1] * 6
+                stage_completion_times = [-1] * 6 
                 stage_first_times = [True] * 6
                 destroyed_metins = 0
                 metin_detected = False
@@ -551,6 +559,7 @@ def run(stage, log_level):
                     game.change_to_channel(next(channel_gen))  # change channel to reset dungeon map; handles the infinite relogging loop
                     stage = 0
                     stage_enter_times = [-1] * 6
+                    stage_completion_times = [-1] * 6 
                     stage_first_times = [True] * 6
                     destroyed_metins = 0
                     metin_detected = False
@@ -628,6 +637,7 @@ def run(stage, log_level):
             logger.success("Stage 'stage_item_drop' (4) completed.")
             stage = 5
             sleep(4)  # wait for the next stage to load
+            stage_completion_times[stage] = perf_counter() - stage_enter_times[stage]
 
 
         stage5_task_msg = "Pokonajcie bossa."
@@ -657,6 +667,7 @@ def run(stage, log_level):
                     game.change_to_channel(next(channel_gen))  # change channel to reset dungeon map; handles the infinite relogging loop
                     stage = 0
                     stage_enter_times = [-1] * 6
+                    stage_completion_times = [-1] * 6 
                     stage_first_times = [True] * 6
                     destroyed_metins = 0
                     metin_detected = False
@@ -717,13 +728,12 @@ def run(stage, log_level):
             game.polymorph_off()
 
             # because of last stage completed
-            stage_completion_times = [perf_counter() - t for t in stage_enter_times]
             if not stage5_took_too_long:
                 logger.success(f"Boss has been killed! Dungeon completed. Re-entering in {REENTER_WAIT}s...")
                 for i, stage_name in enumerate(STAGE_NAMES):
                     logger.success(f"({i}) {stage_name:>20}: {timedelta(seconds=stage_completion_times[i])}")
                 logger.success("")
-                logger.success(f"Total: {timedelta(seconds=sum(stage_completion_times))}")
+                logger.success(f"Total: {timedelta(seconds=perf_counter() - stage_enter_times[0])}")
 
             game.calibrate_camera()
             game.tap_key(GameBind.MOVE_RIGHT, press_time=0.3)
@@ -733,7 +743,7 @@ def run(stage, log_level):
             # reset the parameters
             stage = 0
             stage_enter_times = [-1] * 6
-            # stage_first_times[1:] = [True] * 5  # keep stage0 as False for continuous re-entering
+            stage_completion_times = [-1] * 6
             stage_first_times = [True] * 6
             destroyed_metins = 0
             metin_detected = False
