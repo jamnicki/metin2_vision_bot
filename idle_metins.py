@@ -38,7 +38,7 @@ def main(event, log_level, start):
 
 
 def run(event, log_level, start):
-    yolo = YOLO(MODELS_DIR / "valium_idle_metiny_yolov8s.pt")
+    yolo = YOLO(MODELS_DIR / "valium_idle_metiny_yolov8s.pt").to("cuda:0")
     yolo_verbose = log_level in ["TRACE", "DEBUG"]
     logger.info("YOLO model loaded.")
 
