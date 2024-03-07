@@ -175,7 +175,6 @@ def run(stage, log_level):
                 game.calibrate_camera()
                 game.zoomin_camera(press_time=0.3)
                 game.move_camera_down(press_time=0.8)
-                sleep(1)  # wait for the camera to stabilize before capturing the frame
 
             latest_frame = vision.capture_frame()
             yolo_results = yolo.predict(
@@ -252,12 +251,15 @@ def run(stage, log_level):
             if first_stage_task_msg_visible:
                 stage = 1
                 logger.success("Dungeon entered. Starting the stages sequence.")
+                stage_completion_times[stage] = perf_counter() - stage_enter_times[stage]
                 continue
 
         # STAGE 1
 
         if STAGE_NAMES[stage] == "stage_200_mobs":
             if stage_first_times[stage]:
+                stage_first_times[stage] = False
+                stage_enter_times[stage] = perf_counter()
                 game.polymorph_off()
                 game.mount()
                 game.calibrate_camera()
