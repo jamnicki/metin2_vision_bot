@@ -529,9 +529,9 @@ class GameController:
         self.click_at(login_btn_global_center)
         sleep(10)  # wait for character select menu to load
         self.tap_key(Key.enter)  # confirm character selection (first)
+        self.reset_game_visibility_state()
         sleep(10)  # wait for the game to load
         logger.info("Logged in successfully!")
-        self.reset_game_visibility_state()
 
     def load_saved_credentials(self, idx: int):
         # first_load_credentials_btn_center: (440, 360)
@@ -581,7 +581,7 @@ class GameController:
         sleep(after_tp_wait)  # wait for the teleportation to finish
         # update the map visibility state, but there is no need to actually hide the map,
         # because the its hidden after the teleportation
-        self.map_visible = False
+        self.reset_game_visibility_state()
 
     def idle(self, time: float,
              use_boosters: bool = True,
