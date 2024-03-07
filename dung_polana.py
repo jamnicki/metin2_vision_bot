@@ -360,6 +360,8 @@ def run(stage, log_level):
             #     aż do wykrycia następneg komunikatu
 
             if stage_first_times[stage]:
+                stage_first_times[stage] = False
+                stage_enter_times[stage] = perf_counter()
                 game.unmount()
                 game.use_polymorph()
 
@@ -418,9 +420,6 @@ def run(stage, log_level):
 
                 logger.debug(f"Stage {STAGE_NAMES[stage]} ({stage})  |  {stage_first_times=}")
                 logger.debug(f"Stage {STAGE_NAMES[stage]} ({stage})  |  {stage_enter_times=}")
-                if stage_first_times[stage] and stage_enter_times[stage] == -1:
-                    stage_first_times[stage] = False
-                    stage_enter_times[stage] = perf_counter()
 
             if stage2_timed_out:
                 continue
