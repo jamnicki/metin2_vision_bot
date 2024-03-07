@@ -206,7 +206,7 @@ def run(stage, log_level):
 
             if not any_yolo_results or dung_npc_cls not in yolo_results.boxes.cls:
                 logger.warning(f"Stage {STAGE_NAMES[stage]} ({stage})  |  Dungeon NPC not found. Retrying...")
-                game.move_camera_left(press_time=0.6)
+                game.move_camera_left(press_time=0.5)
                 frame = vision.capture_frame()
                 if frame is None:
                     game.restart_game()
