@@ -1,11 +1,12 @@
-import click
 import sys
+from datetime import timedelta
 from pathlib import Path
 from random import choice
 from time import perf_counter, sleep
-from datetime import timedelta
 from typing import Tuple
 from warnings import filterwarnings
+
+import click
 
 try:
     import pl_core_news_lg
@@ -23,9 +24,8 @@ from ultralytics import checks as yolo_checks
 
 from game_controller import GameController, Key
 from settings import CAP_MAX_FPS, MODELS_DIR, WINDOW_HEIGHT, GameBind, UserBind
-from utils import setup_logger
+from utils import channel_generator, setup_logger
 from vision_detector import VisionDetector
-from utils import channel_generator
 
 
 @click.command()
@@ -90,7 +90,7 @@ def run(stage, log_level):
     ]
 
     WALK_TIME_TO_METIN = 10
-    METIN_DESTROY_TIME = 18
+    METIN_DESTROY_TIME = 15
 
     LOADING_TIMEOUT = 10
     STAGE_200_MOBS_IDLE_TIME = 14
