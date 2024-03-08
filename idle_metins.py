@@ -1,11 +1,11 @@
 import sys
-import click
 from itertools import cycle
 from pathlib import Path
 from random import choice
 from time import perf_counter, sleep
 from typing import Tuple
 
+import click
 import cv2
 import numpy as np
 import spacy
@@ -16,9 +16,8 @@ from ultralytics import checks as yolo_checks
 
 from game_controller import GameController, Key
 from settings import CAP_MAX_FPS, MODELS_DIR, WINDOW_HEIGHT, GameBind, UserBind
-from utils import setup_logger
+from utils import channel_generator, setup_logger
 from vision_detector import VisionDetector
-from utils import channel_generator
 
 
 @click.command()
@@ -59,7 +58,7 @@ def run(event, log_level, start):
     # METIN_DESTROY_TIME = 8  # smierci sohan | poly + masne eq + IS
 
     METIN_CLS = 1  # upadku polana
-    METIN_DESTROY_TIME = 1.75  # upadku polana | poly + masne eq + IS
+    METIN_DESTROY_TIME = 1.5  # upadku polana | poly + masne eq + IS
 
     assert isinstance(METIN_CLS, int), "METIN_CLS must be an integer."
 
@@ -68,8 +67,8 @@ def run(event, log_level, start):
 
     while game.is_running:
         channel = next(channel_gen)
-        game.change_to_channel(channel)
-        
+        game.change_to_channel(channel, wait_after_change=1)
+
         game.use_boosters()
 
         t0 = perf_counter()

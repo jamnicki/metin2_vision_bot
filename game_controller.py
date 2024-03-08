@@ -20,7 +20,6 @@ from pynput.mouse import Controller as MouseController
 from pynput.mouse import Listener as MouseListener
 
 import positions
-from utils import Success
 from settings import (
     GAME_VIEW_POLY_OFF_BTN_POS,
     WINDOW_HEIGHT,
@@ -30,6 +29,7 @@ from settings import (
     GameBind,
     UserBind,
 )
+from utils import Success
 from vision_detector import VisionDetector
 
 
@@ -196,7 +196,7 @@ class GameController:
         else:
             sleep(after_move_wait)
 
-    def change_to_channel(self, channel: int, wait_after_change: float = 1):
+    def change_to_channel(self, channel: int, wait_after_change: float = 3):
         logger.info(f"Switching to CH{channel}...")
         ch_ctrl_bind = getattr(Key, f"f{channel}")
         self.press_with(ch_ctrl_bind, Key.ctrl_l)
