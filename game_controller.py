@@ -604,7 +604,7 @@ class GameController:
             if lure:
                 self.lure()
             if capture:
-                yield self.vision_detector.capture_frame()    
+                yield self.vision_detector.capture_frame()
 
             if act_seq_wait is None:
                 act_seq_wait = self._idle_act_seq_wait()
