@@ -1,21 +1,15 @@
-import sys
-from itertools import cycle
 from pathlib import Path
-from random import choice
 from time import perf_counter, sleep
-from typing import Tuple
 
 import click
-import cv2
 import numpy as np
-import spacy
 from loguru import logger
 from torch import where as torch_where
 from ultralytics import YOLO
 from ultralytics import checks as yolo_checks
 
 from game_controller import GameController, Key
-from settings import CAP_MAX_FPS, MODELS_DIR, WINDOW_HEIGHT, GameBind, UserBind
+from settings import MODELS_DIR, UserBind
 from utils import channel_generator, setup_logger
 from vision_detector import VisionDetector
 
@@ -64,6 +58,11 @@ def run(event, log_level, start):
 
     game.calibrate_camera()
     game.move_camera_down(press_time=0.7)
+    
+    if event:
+        idle_time = METIN_DESTROY_TIME + 0.25
+    else:
+        idle_time = METIN_DESTROY_TIME
 
     while game.is_running:
         channel = next(channel_gen)
@@ -137,13 +136,11 @@ def run(event, log_level, start):
         sleep(WALK_TO_METIN_TIME)
 
         game.start_attack()
-        game.idle(METIN_DESTROY_TIME, pickup=True)
-        if event:
-            game.idle(1, pickup=True)
+        game.idle(idle_time, pickup=True)
         game.pickup()
         game.pickup()
         if event:
-            game.pickup_many(uses=1)
+            game.pickup()
         game.stop_attack()
 
         butelka_dywizji_filled = vision.detect_butelka_dywizji_filled_message(frame=vision.capture_frame())
