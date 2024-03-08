@@ -84,6 +84,8 @@ def run(event, log_level, start):
                 game.login()
                 sleep(3)  # wait out relogging blockage
                 game.change_to_channel(next(channel_gen))  # change channel to reset dungeon map; handles the infinite relogging loop
+                game.calibrate_camera()
+                game.move_camera_down(press_time=0.7)
                 continue
 
             if vision.is_loading(frame=vision.capture_frame()):
