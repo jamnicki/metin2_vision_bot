@@ -590,8 +590,8 @@ class GameController:
              pickup: bool = False,
              lure: bool = False,
              act_seq_wait: Optional[float] = None
-    ) -> None | Generator[np.ndarray, None, None]:
-        yield_frame = None
+    ) -> Generator[None | np.ndarray, None, None]:
+        # yield_frame = None
         t0 = perf_counter()
         logger.info(f"Idling for {time}s...")
         while perf_counter() - t0 <= time:
@@ -604,9 +604,9 @@ class GameController:
                 self.pickup()
             if lure:
                 self.lure()
-            if capture:
-                yield_frame = self.vision_detector.capture_frame()
-            yield yield_frame
+            # if capture:
+            #     yield_frame = self.vision_detector.capture_frame()
+            # yield yield_frame
             if act_seq_wait is None:
                 act_seq_wait = self._idle_act_seq_wait()
             sleep_time = max(act_seq_wait, perf_counter() - seq_t0 + act_seq_wait)
