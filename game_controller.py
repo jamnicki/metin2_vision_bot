@@ -613,4 +613,4 @@ class GameController:
         logger.debug(f"Idling finished")
 
     def _idle_act_seq_wait(self):
-        return uniform(0.05, 0.15)
+        return uniform(0.05, 0.1)
