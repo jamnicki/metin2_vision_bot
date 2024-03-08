@@ -41,7 +41,7 @@ def run(event, log_level, start):
     game = GameController(vision_detector=vision, start_delay=2)
     logger.info("Game controller loaded.")
 
-    channel_gen = channel_generator(1, 8, start=start)
+    channel_gen = channel_generator(1, 8, start=start, step=3 if event else 1)
 
     YOLO_CONFIDENCE_THRESHOLD = 0.75
     CHANNEL_TIMEOUT = 20
