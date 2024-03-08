@@ -77,7 +77,6 @@ def run(event, log_level, start):
             frame = vision.capture_frame()
             if frame is None:
                 game.restart_game()
-                stage3_first_frame = True
                 continue
 
             if vision.logged_out(frame):
@@ -136,7 +135,12 @@ def run(event, log_level, start):
         sleep(WALK_TO_METIN_TIME)
 
         game.start_attack()
-        game.idle(idle_time, pickup=True)
+        for frame in game.idle(idle_time, capture=True, pickup=True):
+            butelka_dywizji_filled = vision.detect_butelka_dywizji_filled_message(frame)
+            if butelka_dywizji_filled:
+                game.move_full_butelka_dywizji()
+                game.use_next_butelka_dywizji()
+
         game.pickup()
         game.pickup()
         if event:

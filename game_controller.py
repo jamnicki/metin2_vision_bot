@@ -2,7 +2,7 @@ import os
 import re
 from random import choice, choices, uniform
 from time import perf_counter, sleep
-from typing import Optional, Tuple
+from typing import Generator, Optional, Tuple
 
 import pytesseract
 
@@ -584,12 +584,13 @@ class GameController:
         self.reset_game_visibility_state()
 
     def idle(self, time: float,
+             capture: bool = False,
              use_boosters: bool = True,
              turn_randomly: bool = False,
              pickup: bool = False,
              lure: bool = False,
              act_seq_wait: Optional[float] = None
-    ) -> Success:
+    ) -> None | Generator[np.ndarray, None, None]:
         t0 = perf_counter()
         logger.info(f"Idling for {time}s...")
         while perf_counter() - t0 <= time:
@@ -602,12 +603,14 @@ class GameController:
                 self.pickup()
             if lure:
                 self.lure()
+            if capture:
+                yield self.vision_detector.capture_frame()    
+
             if act_seq_wait is None:
                 act_seq_wait = self._idle_act_seq_wait()
             sleep_time = max(act_seq_wait, perf_counter() - seq_t0 + act_seq_wait)
             sleep(sleep_time)
         logger.debug(f"Idling finished")
-        return True
 
     def _idle_act_seq_wait(self):
         return uniform(0.05, 0.15)
