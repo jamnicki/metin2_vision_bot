@@ -125,7 +125,7 @@ def run(event, log_level, start):
         if timed_out and not metin_detected:
             continue
 
-        metins_xywh = yolo_results.boxes.xywh[metins_idxs]
+        metins_xywh = yolo_results.boxes.xywh[metins_idxs].cpu()
         metins_distance_to_center = np.linalg.norm(metins_xywh[:, :2] - np.array(vision.center), axis=1)
         closest_metin_idx = metins_distance_to_center.argmin()
         closest_metin_bbox_xywh = yolo_results.boxes.xywh[closest_metin_idx]
