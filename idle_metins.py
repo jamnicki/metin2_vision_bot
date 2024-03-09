@@ -137,15 +137,7 @@ def run(event, log_level, start):
         sleep(WALK_TO_METIN_TIME)
 
         game.start_attack()
-        butelka_dywizji_filled = False
-        for frame in game.idle(idle_time, capture=True, pickup=True):
-            if butelka_dywizji_filled:
-                continue
-            butelka_dywizji_filled = vision.detect_butelka_dywizji_filled_message(frame)
-
-        if butelka_dywizji_filled:
-            game.move_full_butelka_dywizji()
-            game.use_next_butelka_dywizji()
+        game.idle(idle_time, pickup=True)
 
         game.pickup()
         game.pickup()

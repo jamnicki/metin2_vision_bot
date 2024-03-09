@@ -590,7 +590,8 @@ class GameController:
              pickup: bool = False,
              lure: bool = False,
              act_seq_wait: Optional[float] = None
-    ) -> Generator[None | np.ndarray, None, None]:
+    # ) -> Generator[None | np.ndarray, None, None]:
+    ) -> None:
         # yield_frame = None
         t0 = perf_counter()
         logger.info(f"Idling for {time}s...")
