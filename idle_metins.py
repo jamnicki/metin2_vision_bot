@@ -52,7 +52,7 @@ def run(event, log_level, start):
     # METIN_DESTROY_TIME = 8  # smierci sohan | poly + masne eq + IS
 
     METIN_CLS = 1  # upadku polana
-    METIN_DESTROY_TIME = 1.5  # upadku polana | poly + masne eq + IS
+    METIN_DESTROY_TIME = 1.25  # upadku polana | poly + masne eq + IS
 
     assert isinstance(METIN_CLS, int), "METIN_CLS must be an integer."
 
@@ -138,8 +138,6 @@ def run(event, log_level, start):
 
         game.start_attack()
         game.idle(idle_time, pickup=True)
-
-        game.pickup()
         game.pickup()
         if event:
             game.pickup()
