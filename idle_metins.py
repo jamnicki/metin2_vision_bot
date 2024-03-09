@@ -139,6 +139,7 @@ def run(event, log_level, start):
         game.start_attack()
         game.idle(idle_time, pickup=True)
         game.pickup()
+        game.pickup()
         if event:
             game.pickup()
         game.stop_attack()
