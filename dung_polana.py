@@ -696,6 +696,7 @@ def run(stage, log_level):
                     continue
                 
                 game.lure()
+                game.pickup()
                 game.turn_randomly()
                 dung_message = VisionDetector.get_dungeon_message(frame=vision.capture_frame())
                 logger.debug(f"Stage {STAGE_NAMES[stage]} ({stage})  | {dung_message=}")
@@ -709,10 +710,8 @@ def run(stage, log_level):
                     stage5_boss_killed = True
                     break
 
-                if double_boss_event_msg and perf_counter() - stage5_t0 > STAGE_TIMEOUT[stage]:
-                    logger.warning(f"Stage {STAGE_NAMES[stage]} ({stage})  |  Timeout ({STAGE_5_TIMEOUT}s). Re-entering in {REENTER_WAIT}s...")
-                    game.pickup_many(uses=5)
-                    stage5_took_too_long = True
+                if double_boss_event_msg and perf_counter() - stage_enter_times[stage] > 120:
+                    stage5_boss_killed = True
                     break
 
                 logger.debug(f"Stage {STAGE_NAMES[stage]} ({stage})  |  {stage_first_times=}")
