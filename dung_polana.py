@@ -83,14 +83,14 @@ def run(stage, log_level):
     STAGE_TIMEOUT = [
         60,       # before_enter
         60 * 2,   # stage_200_mobs
-        60 * 5,   # stage_minibosses
-        60 * 8,   # stage_metins
-        60 * 5,   # stage_item_drop
-        60 * 5,   # stage_boss
+        60 * 2,   # stage_minibosses
+        60 * 5,   # stage_metins
+        60 * 3,   # stage_item_drop
+        60 * 7,   # stage_boss
     ]
 
     WALK_TIME_TO_METIN = 10
-    METIN_DESTROY_TIME = 15
+    METIN_DESTROY_TIME = 11
 
     LOADING_TIMEOUT = 10
     STAGE_200_MOBS_IDLE_TIME = 14
