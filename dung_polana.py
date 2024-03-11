@@ -95,6 +95,7 @@ def run(stage, log_level):
     LOADING_TIMEOUT = 10
     STAGE_200_MOBS_IDLE_TIME = 14
     STAGE_ITEM_DROP_IDLE_TIME = 14
+    STAGE_BOSS_WALK_TIME = 3
     
     BOSS_CLS = 0
     METIN_CLS = 1
@@ -398,7 +399,7 @@ def run(stage, log_level):
 
             # walk to closest boss
             game.click_at(closest_boss_center_global)
-            sleep(4)
+            sleep(STAGE_BOSS_WALK_TIME)
 
             stage2_all_minibosses_killed = False
             stage2_timed_out = False
@@ -720,8 +721,8 @@ def run(stage, log_level):
 
             # walk to closest boss
             game.click_at(closest_boss_center_global)
-            sleep(5)
-            
+            sleep(STAGE_BOSS_WALK_TIME)
+
             game.start_attack()
 
             stage5_t0 = perf_counter()
