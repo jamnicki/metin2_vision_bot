@@ -389,7 +389,7 @@ def run(stage, log_level):
                 logger.warning(f"Stage {STAGE_NAMES[stage]} ({stage})  |  Boss not found. Looking around, retrying...")
                 continue
 
-            bosses_xywh = yolo_results.boxes.xywh[metins_idxs].cpu()
+            bosses_xywh = yolo_results.boxes.xywh[bosses_idxs].cpu()
             bosses_distance_to_center = np.linalg.norm(bosses_xywh[:, :2] - np.array(vision.center), axis=1)
             closest_boss_idx = bosses_distance_to_center.argmin()
             closest_boss_bbox_xywh = yolo_results.boxes.xywh[closest_boss_idx]
