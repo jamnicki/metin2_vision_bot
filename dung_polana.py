@@ -686,6 +686,40 @@ def run(stage, log_level):
             game.lure_many()
             game.toggle_passive_skills()
             game.use_polymorph()
+            game.zoomin_camera(press_time=0.1)
+            game.move_camera_down(press_time=0.8)
+
+            latest_frame = vision.capture_frame()
+            yolo_results = yolo.predict(
+                source=VisionDetector.fill_non_clickable_wth_black(latest_frame),
+                conf=YOLO_METIN_CONFIDENCE_THRESHOLD,
+                verbose=yolo_verbose
+            )[0]
+            any_yolo_results = len(yolo_results.boxes.cls) > 0
+            if not any_yolo_results:
+                game.move_camera_right(press_time=0.2)
+                logger.warning(f"Stage {STAGE_NAMES[stage]} ({stage})  |  Metin not found. Looking around, retrying...")
+                continue
+
+            bosses_idxs = torch_where(yolo_results.boxes.cls == BOSS_CLS)
+            bosses_detected = bosses_idxs[0].shape[0] > 0
+            logger.debug(f"Stage {STAGE_NAMES[stage]} ({stage})  |  {bosses_idxs=} {bosses_detected=}")
+            if not bosses_detected:
+                game.move_camera_left(press_time=0.3)
+                logger.warning(f"Stage {STAGE_NAMES[stage]} ({stage})  |  Boss not found. Looking around, retrying...")
+                continue
+
+            bosses_xywh = yolo_results.boxes.xywh[bosses_idxs].cpu()
+            bosses_distance_to_center = np.linalg.norm(bosses_xywh[:, :2] - np.array(vision.center), axis=1)
+            closest_boss_idx = bosses_distance_to_center.argmin()
+            closest_boss_bbox_xywh = yolo_results.boxes.xywh[closest_boss_idx]
+            closest_boss_bbox_center = closest_boss_bbox_xywh[:2]
+            closest_boss_center_global = vision.get_global_pos(closest_boss_bbox_center)
+
+            # walk to closest boss
+            game.click_at(closest_boss_center_global)
+            sleep(5)
+            
             game.start_attack()
 
             stage5_t0 = perf_counter()
