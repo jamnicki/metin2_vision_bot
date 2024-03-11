@@ -42,10 +42,20 @@ Ultralytics YOLOv8.0.196 🚀 Python-3.10.12 torch-2.1.0+cu121 CUDA:0 (Tesla T4,
 </div>
 
 
+## Custom Dataset
+[Roboflow Dataset Overview](https://universe.roboflow.com/metin2visionbot/mt2-valium-polana) (316 images, 800x600)
+
+### Augmentation
+- Outputs per training example: 3
+- Flip: Horizontal
+- Blur: Up to 1px
+
+### Annotation Heatmap
+
+<img width=30% src=https://github.com/jamnicki/metin2_vision_bot/assets/56606076/9bdaacb1-6317-49c5-9017-83fe09758871>
+
 ## Direction Recognition
 
 Grayscale Threshold, Contours Recognition and not triangular shape filter
 
-<div align="center">
-    <img width=60% src=https://github.com/jamnicki/metin2_vision_bot/assets/56606076/2b024e26-d2b6-4dfc-b757-8db8de789faf>
-</div>
+<img width=60% src=https://github.com/jamnicki/metin2_vision_bot/assets/56606076/2b024e26-d2b6-4dfc-b757-8db8de789faf>
