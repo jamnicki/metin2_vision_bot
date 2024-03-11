@@ -1,2 +1,1 @@
-# metin2_vision_bot
- 
+# Metin2 (MMORPG) Vision Bot
