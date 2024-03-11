@@ -95,7 +95,10 @@ def run(stage, log_level):
     LOADING_TIMEOUT = 10
     STAGE_200_MOBS_IDLE_TIME = 14
     STAGE_ITEM_DROP_IDLE_TIME = 14
-
+    
+    BOSS_CLS = 0
+    METIN_CLS = 1
+    NPC_CLS = 2
 
     stage1_task_msg = "Pokonajcie 200 potworów."
     stage2_task_msg = "Pokonajcie wszystkie bossy."
@@ -165,7 +168,6 @@ def run(stage, log_level):
 
         # ENTER DUNGEON
 
-        dung_npc_cls = 1
         stage0_timed_out = False
         if STAGE_NAMES[stage] == "before_enter":
             if stage_first_times[stage]:
@@ -203,7 +205,7 @@ def run(stage, log_level):
                 stage3_first_frame = True
                 continue
 
-            if not any_yolo_results or dung_npc_cls not in yolo_results.boxes.cls:
+            if not any_yolo_results or NPC_CLS not in yolo_results.boxes.cls:
                 logger.warning(f"Stage {STAGE_NAMES[stage]} ({stage})  |  Dungeon NPC not found. Retrying...")
                 game.move_camera_left(press_time=0.5)
                 frame = vision.capture_frame()
@@ -229,7 +231,7 @@ def run(stage, log_level):
                 continue
 
             logger.debug(f"{yolo_results.boxes.cls=}")
-            dung_npc_bbox_idx = torch_where(yolo_results.boxes.cls == dung_npc_cls)[0][0].item()
+            dung_npc_bbox_idx = torch_where(yolo_results.boxes.cls == NPC_CLS)[0][0].item()
 
             logger.debug(f"{yolo_results.boxes[dung_npc_bbox_idx]=}")
             dung_npc_xywh = yolo_results.boxes.xywh[dung_npc_bbox_idx]
@@ -364,6 +366,39 @@ def run(stage, log_level):
                 stage_enter_times[stage] = perf_counter()
                 game.unmount()
                 game.use_polymorph()
+                game.zoomin_camera(press_time=0.1)
+                game.move_camera_down(press_time=0.8)
+
+            latest_frame = vision.capture_frame()
+            yolo_results = yolo.predict(
+                source=VisionDetector.fill_non_clickable_wth_black(latest_frame),
+                conf=YOLO_METIN_CONFIDENCE_THRESHOLD,
+                verbose=yolo_verbose
+            )[0]
+            any_yolo_results = len(yolo_results.boxes.cls) > 0
+            if not any_yolo_results:
+                game.move_camera_right(press_time=0.2)
+                logger.warning(f"Stage {STAGE_NAMES[stage]} ({stage})  |  Metin not found. Looking around, retrying...")
+                continue
+
+            bosses_idxs = torch_where(yolo_results.boxes.cls == BOSS_CLS)
+            bosses_detected = bosses_idxs[0].shape[0] > 0
+            logger.debug(f"Stage {STAGE_NAMES[stage]} ({stage})  |  {bosses_idxs=} {bosses_detected=}")
+            if not bosses_detected:
+                game.move_camera_left(press_time=0.3)
+                logger.warning(f"Stage {STAGE_NAMES[stage]} ({stage})  |  Boss not found. Looking around, retrying...")
+                continue
+
+            bosses_xywh = yolo_results.boxes.xywh[metins_idxs].cpu()
+            bosses_distance_to_center = np.linalg.norm(bosses_xywh[:, :2] - np.array(vision.center), axis=1)
+            closest_boss_idx = bosses_distance_to_center.argmin()
+            closest_boss_bbox_xywh = yolo_results.boxes.xywh[closest_boss_idx]
+            closest_boss_bbox_center = closest_boss_bbox_xywh[:2]
+            closest_boss_center_global = vision.get_global_pos(closest_boss_bbox_center)
+
+            # walk to closest boss
+            game.click_at(closest_boss_center_global)
+            sleep(4)
 
             stage2_all_minibosses_killed = False
             stage2_timed_out = False
@@ -380,7 +415,6 @@ def run(stage, log_level):
                     stage_first_times = [True] * 6
                     destroyed_metins = 0
                     metin_detected = False
-                    stage3_first_frame = True
                     break
 
                 game.start_attack()
@@ -407,7 +441,7 @@ def run(stage, log_level):
                     logger.warning("Valium message detected. Skipping this frame, recapturing in 5s...")
                     sleep(5)
                     continue
-                
+
                 dung_message = VisionDetector.get_dungeon_message(frame=vision.capture_frame())
                 msg_similarity = nlp(dung_message).similarity(nlp(stage3_task_msg))
                 next_task_msg = msg_similarity > 0.85
@@ -433,7 +467,6 @@ def run(stage, log_level):
             continue
 
 
-        metin_cls = 0
         if STAGE_NAMES[stage] == "stage_metins":
             # - zniszcz 5 metinów
             #     - kamera na skos wykrywanie
@@ -505,7 +538,7 @@ def run(stage, log_level):
                 obstacle_avoided = True
                 continue
 
-            metins_idxs = torch_where(yolo_results.boxes.cls == metin_cls)
+            metins_idxs = torch_where(yolo_results.boxes.cls == METIN_CLS)
             metin_detected = metins_idxs[0].shape[0] > 0
             logger.debug(f"Stage {STAGE_NAMES[stage]} ({stage})  |  {metins_idxs=} {metin_detected=}")
             if not metin_detected:
