@@ -65,16 +65,11 @@ class ResourceName(Enum):
     LOADING_ICON = "loading_icon"
 
 
-METIN_MORDERSTWA_70_NAME = "morderstwa_70"
-METIN_MORDERSTWA_70_IMG_FPATH = METINS_DIR / "metin_morderstwa_70.png"
-
-
 WINDOW_NAME = "Akademia Valium.pl"
 WINDOW_WIDTH = 800
 WINDOW_HEIGHT = 600
 
 GAME_VIEW_POLY_OFF_BTN_POS = (606, 70)  # 800x600
-# GAME_VIEW_POLY_OFF_BTN_POS = (606, 3)  # 800x530
 
 RANDOM_TURN_PROB = 0.2
 SPOT_DELAY = 1.1
