@@ -76,7 +76,7 @@ def run(stage, log_level):
     game.hide_minimap()
 
     REENTER_WAIT = 2
-    YOLO_CONFIDENCE_THRESHOLD = 0.8
+    YOLO_CONFIDENCE_THRESHOLD = 0.7
     YOLO_METIN_CONFIDENCE_THRESHOLD = 0.8
     NONSENSE_MSG_SIMILARITY_THRESHOLD = 0
     STAGE_NAMES = ["before_enter", "stage_200_mobs", "stage_minibosses", "stage_metins", "stage_item_drop", "stage_boss"]
@@ -683,11 +683,13 @@ def run(stage, log_level):
             #     - pickup_many(uses=5?)
             #     - atakuj aż do braku komunikatu "Zabijcie bossa." ?
 
-            game.lure_many()
-            game.toggle_passive_skills()
-            game.use_polymorph()
-            game.zoomin_camera(press_time=0.1)
-            game.move_camera_down(press_time=0.8)
+            if stage_first_times[stage]:
+                stage_first_times[stage] = False
+                stage_enter_times[stage] = perf_counter()
+                game.lure_many()
+                game.use_polymorph()
+                game.zoomin_camera(press_time=0.1)
+                game.move_camera_down(press_time=0.8)
 
             latest_frame = vision.capture_frame()
             yolo_results = yolo.predict(
@@ -698,7 +700,7 @@ def run(stage, log_level):
             any_yolo_results = len(yolo_results.boxes.cls) > 0
             if not any_yolo_results:
                 game.move_camera_right(press_time=0.2)
-                logger.warning(f"Stage {STAGE_NAMES[stage]} ({stage})  |  Metin not found. Looking around, retrying...")
+                logger.warning(f"Stage {STAGE_NAMES[stage]} ({stage})  |  Boss not found. Looking around, retrying...")
                 continue
 
             bosses_idxs = torch_where(yolo_results.boxes.cls == BOSS_CLS)
