@@ -118,7 +118,7 @@ def run(stage, log_level):
         logger.debug(f"Stage {STAGE_NAMES[stage]} ({stage})")
         cap_t0 = perf_counter()
 
-        cv2.imwrite(f"{STAGE_NAMES[stage]}__{cap_t0}.jpg", vision.capture_frame())
+        cv2.imwrite(f"./data/tmp/{STAGE_NAMES[stage]}__{str(cap_t0).replace(".", "f")}.jpg", vision.capture_frame())
 
         frame = vision.capture_frame()
         if frame is None:
