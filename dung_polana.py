@@ -489,7 +489,7 @@ def run(stage, log_level):
             logger.debug(f"Stage {STAGE_NAMES[stage]} ({stage})  | {dung_message=} ({msg_similarity=:.3f})")
             logger.debug(f"Stage {STAGE_NAMES[stage]} ({stage})  | {next_task_msg=} {stage4_task_msg=}")
             if next_task_msg:
-                game.polymorph_off()
+                # game.polymorph_off()
                 game.pickup_many()
 
                 logger.success("Stage 'stage_metins' (3) completed.")
@@ -800,7 +800,7 @@ def run(stage, log_level):
 
             game.pickup_many(uses=3)
             game.stop_attack()
-            game.polymorph_off()
+            # game.polymorph_off()
 
             # because of last stage completed
             if not stage5_took_too_long:
