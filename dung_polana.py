@@ -266,8 +266,9 @@ def run(stage, log_level):
             if stage_first_times[stage]:
                 stage_first_times[stage] = False
                 stage_enter_times[stage] = perf_counter()
-                game.polymorph_off()
-                game.mount()
+                game.use_polymorph()
+                # game.polymorph_off()
+                # game.mount()
                 game.calibrate_camera()
 
             stage1_all_mobs_killed = False
@@ -298,9 +299,9 @@ def run(stage, log_level):
                 game.pickup()
 
                 # steer randomly for 2 seconds (escape the ghost mobs that are attacking)
-                game.press_key(GameBind.CIECIE_Z_SIODLA)
+                # game.press_key(GameBind.CIECIE_Z_SIODLA)
                 game.steer_randomly(press_time=2)
-                game.release_key(GameBind.CIECIE_Z_SIODLA)
+                # game.release_key(GameBind.CIECIE_Z_SIODLA)
 
                 frame = vision.capture_frame()
                 if frame is None:
@@ -581,9 +582,10 @@ def run(stage, log_level):
             #     - pickup
             #     - czy Runo Leśne pojawiło się w eq? TAK: kliknij na nie ppm NIE: atakuj dalej 
 
-            game.polymorph_off()
-            game.mount()
+            # game.polymorph_off()
+            # game.mount()
             game.calibrate_camera()
+            game.use_polymorph()
 
             looking_for_item_t0 = perf_counter()
             next_stage_act_item_found = False
