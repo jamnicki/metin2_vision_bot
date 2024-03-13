@@ -93,10 +93,10 @@ def run(stage, log_level):
     METIN_DESTROY_TIME = 11
 
     LOADING_TIMEOUT = 10
-    STAGE_200_MOBS_IDLE_TIME = 12
-    STAGE_ITEM_DROP_IDLE_TIME = 12
+    STAGE_200_MOBS_IDLE_TIME = 16
+    STAGE_ITEM_DROP_IDLE_TIME = 16
     STAGE_BOSS_WALK_TIME = 3
-    
+
     BOSS_CLS = 0
     METIN_CLS = 1
     NPC_CLS = 2
@@ -642,15 +642,15 @@ def run(stage, log_level):
                     # so pick it up
                     game.stop_attack()
                     item_dropped_global_loc = vision.get_global_pos(item_dropped_loc)
-                    game.press_key(GameBind.CIECIE_Z_SIODLA)
+                    # game.press_key(GameBind.CIECIE_Z_SIODLA)
                     game.click_at(item_dropped_global_loc)
-                    game.release_key(GameBind.CIECIE_Z_SIODLA)
+                    # game.release_key(GameBind.CIECIE_Z_SIODLA)
                     game.pickup_many(uses=5)
                 else:
                     # steer randomly for 2 seconds (escape the ghost mobs that are attacking)
-                    game.press_key(GameBind.CIECIE_Z_SIODLA)
+                    # game.press_key(GameBind.CIECIE_Z_SIODLA)
                     game.steer_randomly(press_time=2)
-                    game.release_key(GameBind.CIECIE_Z_SIODLA)
+                    # game.release_key(GameBind.CIECIE_Z_SIODLA)
 
                 next_stage_act_item_found, item_found_conf, item_found_loc = vision.detect_runo_lesne(frame=vision.capture_frame())
 
