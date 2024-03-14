@@ -362,6 +362,9 @@ class GameController:
         if self.mounted:
             self.toggle_mount()
 
+    def summon_horse(self):
+        self.tap_key(UserBind.HORSE)
+
     def use_polymorph(self):
         self.tap_key(UserBind.MARMUREK, press_time=1)
         sleep(0.5)

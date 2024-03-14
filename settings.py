@@ -40,6 +40,7 @@ class GameBind(Enum):
 
 
 class UserBind(Enum):
+    HORSE = "1"
     CIECIE_Z_SIODLA = "2"
     PELERYNKA = "3"
     BERSERK = "4"
