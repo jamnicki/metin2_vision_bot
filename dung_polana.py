@@ -36,7 +36,8 @@ from vision_detector import VisionDetector
               type=click.Choice(["TRACE", "DEBUG", "INFO"], case_sensitive=False),
               help="Set the logging level."
 )
-def main(stage, log_level):
+@click.option("--saved_credentials_idx", default=1, type=int, show_default=True, help="Saved credentials index to use.")
+def main(stage, log_level, saved_credentials_idx):
     log_level = log_level.upper()
     setup_logger(script_name=Path(__file__).name, level=log_level)
     # q = input(
@@ -58,10 +59,10 @@ def main(stage, log_level):
     #     logger.warning("Terminated by user.")
     #     exit()
     logger.warning("Starting the bot...")
-    run(stage, log_level)
+    run(stage, log_level, saved_credentials_idx)
 
 
-def run(stage, log_level):
+def run(stage, log_level, saved_credentials_idx):
     yolo_checks()
     yolo_verbose = log_level in ["TRACE", "DEBUG"]
     yolo = YOLO(MODELS_DIR / "valium_polana_yolov8s.pt").to("cuda:0")
@@ -69,7 +70,7 @@ def run(stage, log_level):
     nlp = pl_core_news_lg.load()
 
     vision = VisionDetector()
-    game = GameController(vision_detector=vision, start_delay=2)
+    game = GameController(vision_detector=vision, start_delay=2, saved_credentials_idx=saved_credentials_idx)
     start_time = perf_counter()
     channel_gen = channel_generator(3, 6)
 
