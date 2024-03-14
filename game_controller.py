@@ -356,6 +356,7 @@ class GameController:
 
     def mount(self):
         if not self.mounted:
+            self.summon_horse()
             self.toggle_mount()
 
     def unmount(self):
