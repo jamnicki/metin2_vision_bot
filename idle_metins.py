@@ -69,8 +69,6 @@ def run(event, log_level, start, saved_credentials_idx):
         channel = next(channel_gen)
         game.change_to_channel(channel, wait_after_change=1)
 
-        game.use_boosters()
-
         t0 = perf_counter()
         metin_detected = False
         timed_out = False
@@ -133,6 +131,7 @@ def run(event, log_level, start, saved_credentials_idx):
         closest_metin_bbox_center = closest_metin_bbox_xywh[:2]
         closest_metin_center_global = vision.get_global_pos(closest_metin_bbox_center)
 
+        game.use_boosters()
         game.click_at(closest_metin_center_global)
 
         sleep(WALK_TO_METIN_TIME)
