@@ -23,14 +23,15 @@ from vision_detector import VisionDetector
               help="Set the logging level."
 )
 @click.option("--start", default=1, show_default=True, type=click.IntRange(1, 8), help="Start channel.")
-def main(event, log_level, start):
+@click.option("--saved_credentials_idx", default=1, type=int, show_default=True, help="Saved credentials index to use.")
+def main(event, log_level, start, saved_credentials_idx):
     log_level = log_level.upper()
     yolo_checks()
     setup_logger(script_name=Path(__file__).name, level=log_level)
-    run(event, log_level, start)
+    run(event, log_level, start, saved_credentials_idx)
 
 
-def run(event, log_level, start):
+def run(event, log_level, start, saved_credentials_idx):
     yolo = YOLO(MODELS_DIR / "valium_idle_metiny_yolov8s.pt").to("cuda:0")
     yolo_verbose = log_level in ["TRACE", "DEBUG"]
     logger.info("YOLO model loaded.")
@@ -38,7 +39,7 @@ def run(event, log_level, start):
     vision = VisionDetector()
     logger.info("Vision detector loaded.")
 
-    game = GameController(vision_detector=vision, start_delay=2)
+    game = GameController(vision_detector=vision, start_delay=2, saved_credentials_idx=saved_credentials_idx)
     logger.info("Game controller loaded.")
 
     channel_gen = channel_generator(1, 8, start=start, step=3 if event else 1)
