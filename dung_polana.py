@@ -267,9 +267,9 @@ def run(stage, log_level, saved_credentials_idx):
             if stage_first_times[stage]:
                 stage_first_times[stage] = False
                 stage_enter_times[stage] = perf_counter()
-                game.use_polymorph()
-                # game.polymorph_off()
-                # game.mount()
+                # game.use_polymorph()
+                game.polymorph_off()
+                game.mount()
                 game.calibrate_camera()
 
             stage1_all_mobs_killed = False
@@ -583,8 +583,8 @@ def run(stage, log_level, saved_credentials_idx):
             #     - pickup
             #     - czy Runo Leśne pojawiło się w eq? TAK: kliknij na nie ppm NIE: atakuj dalej 
 
-            # game.polymorph_off()
-            # game.mount()
+            game.polymorph_off()
+            game.mount()
             game.calibrate_camera()
             game.use_polymorph()
 
