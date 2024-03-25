@@ -4,7 +4,16 @@ Automatic Bot for Massive Dungeons Passing based on Windows API, YoloV8 object d
 
 ## Demo
 
-![demo_idle_metins](https://drive.google.com/uc?id=11xtTn8HgH4F9w005WQ2kmayWgE9uCIL2)
+<div align="center">
+    <video src=https://github.com/jamnicki/metin2_vision_bot/assets/56606076/3a4a4a4a-a1ac-4911-8ce1-5cf917d08e7d>
+</div>
+<div align="center">
+    <video src=https://github.com/jamnicki/metin2_vision_bot/assets/56606076/9984878b-9811-406f-bfc2-4f3c30795f69>
+</div>
+<div align="center">
+    <video src=https://github.com/jamnicki/metin2_vision_bot/assets/56606076/62987cd4-6f0f-419f-b636-24daa029de3b>
+</div>
+
 
 ## Key Packages
 - Keyboard and Mouse controll: `pynput`
