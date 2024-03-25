@@ -2,6 +2,10 @@
 
 Automatic Bot for Massive Dungeons Passing based on Windows API, YoloV8 object detection, statistical methods from OpenCV, Tesseract-OCR and spaCy virtualised with Hyper-V (Win11+CUDA)
 
+## Demo
+
+![demo_idle_metins](https://drive.google.com/uc?id=11xtTn8HgH4F9w005WQ2kmayWgE9uCIL2)
+
 ## Key Packages
 - Keyboard and Mouse controll: `pynput`
 - Custom Data Annotation: `Roboflow`
