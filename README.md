@@ -30,7 +30,7 @@ Automatic Bot for Massive Dungeons Passing based on Windows API, YoloV8 object d
 
 ## YoloV8
 
-Ultralytics YOLOv8.0.196 🚀 Python-3.10.12 torch-2.1.0+cu121 CUDA:0 (Tesla T4, 15102MiB)
+Model prepared with Ultralytics YOLOv8.0.196 🚀 Python-3.10.12 torch-2.1.0+cu121 CUDA:0 (Tesla T4, 15102MiB)
 
 <div align="center">
   <img width=80% src=https://github.com/jamnicki/metin2_vision_bot/assets/56606076/2316a2b4-4551-4572-8825-f70b270ffd51>
