@@ -51,7 +51,7 @@ Ultralytics YOLOv8.0.196 🚀 Python-3.10.12 torch-2.1.0+cu121 CUDA:0 (Tesla T4,
 
 <div align="center">
     <img width=70% src=https://github.com/jamnicki/metin2_vision_bot/assets/56606076/36d47e7a-ce6a-40ab-a71c-dcb0216e4333>
-    <img width=70% src=https://github.com/jamnicki/metin2_vision_bot/assets/56606076/34e5c6af-0377-40f9-b923-cab9951ffb1a>
+<!--     <img width=70% src=https://github.com/jamnicki/metin2_vision_bot/assets/56606076/34e5c6af-0377-40f9-b923-cab9951ffb1a> -->
 </div>
 
 
