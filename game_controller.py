@@ -158,8 +158,7 @@ class GameController:
         logger.trace(f"{'Right' if right else 'Left'} mouse button clicked")
 
     def catch_fish(self, pos: Tuple[int, int]):
-        self.move_cursor_at(pos)
-        self.mouse.click(Button.left)
+        self.click_at(pos, fast=True)
 
     def _press_mouse_btn(self, right=False):
         self.mouse.press(Button.right if right else Button.left)
@@ -169,7 +168,7 @@ class GameController:
 
     def click_at(self, pos: Tuple[int, int], right=False, times: int = 1, fast=False):
         self.move_cursor_at(pos)
-        sleep(0.5 if not fast else 0.1)
+        sleep(0.5 if not fast else 0.2)
         self.click(right=right, times=times)
 
     def get_user_position(
