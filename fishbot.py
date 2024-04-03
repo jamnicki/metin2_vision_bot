@@ -70,7 +70,7 @@ def run(stage, log_level, saved_credentials_idx):
 
         if not fish_detected:
             logger.info("No fish detected.")
-            sleep(0.25)
+            sleep(0.1)
             continue
 
         fish_bbox_xywh = yolo_results.boxes.xywh[0]
@@ -81,8 +81,6 @@ def run(stage, log_level, saved_credentials_idx):
         fish_bbox_center_global = vision.get_global_pos(fish_bbox_center_fixed)
 
         game.catch_fish(fish_bbox_center_global)
-
-        sleep(1)
 
     if game.is_running:
         game.exit()
