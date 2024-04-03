@@ -66,7 +66,8 @@ class ResourceName(Enum):
     LOADING_ICON = "loading_icon"
 
 
-WINDOW_NAME = "Akademia Valium.pl"
+# WINDOW_NAME = "Akademia Valium.pl"
+WINDOW_NAME = "METIN2"
 WINDOW_WIDTH = 800
 WINDOW_HEIGHT = 600
 

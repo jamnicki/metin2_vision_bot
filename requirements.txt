@@ -1,6 +1,5 @@
 pynput
 opencv-python
-pywin32
 pypiwin32
 
 ultralytics==8.0.196

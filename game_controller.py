@@ -148,6 +148,10 @@ class GameController:
         self.mouse.release(button)
         logger.trace(f"{'Right' if right else 'Left'} mouse button clicked")
 
+    def catch_fish(self, pos: Tuple[int, int]):
+        self.move_cursor_at(pos)
+        self.mouse.click(Button.left)
+
     def _press_mouse_btn(self, right=False):
         self.mouse.press(Button.right if right else Button.left)
 
