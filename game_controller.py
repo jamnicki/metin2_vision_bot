@@ -168,7 +168,7 @@ class GameController:
 
     def click_at(self, pos: Tuple[int, int], right=False, times: int = 1, fast=False):
         self.move_cursor_at(pos)
-        sleep(0.5 if not fast else 0.3)
+        sleep(0.5 if not fast else 0.4)
         self.click(right=right, times=times)
 
     def get_user_position(
