@@ -76,7 +76,7 @@ def run(stage, log_level, saved_credentials_idx):
         fish_bbox_xywh = yolo_results.boxes.xywh[0]
         fish_bbox_center = fish_bbox_xywh[:2]
 
-        fish_bbox_center_fixed = fish_bbox_center + np.array([101, 77])
+        fish_bbox_center_fixed = fish_bbox_center.cpu() + np.array([101, 77])
 
         fish_bbox_center_global = vision.get_global_pos(fish_bbox_center_fixed)
 
